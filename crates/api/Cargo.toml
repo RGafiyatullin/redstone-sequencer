@@ -1,0 +1,17 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+server = ["jsonrpsee/server"]
+client = ["jsonrpsee/client", "jsonrpsee/async-client"]
+
+[dependencies]
+# alloy-primitives.workspace = true
+# alloy-primitives.features = ["serde"]
+jsonrpsee.workspace = true
+jsonrpsee.features = ["macros"]
+reth-rpc-api.workspace = true

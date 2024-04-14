@@ -1,0 +1,52 @@
+[package]
+name = "redstone-sequencer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-trait.workspace = true
+alloy-primitives.workspace = true
+dotenv.workspace = true
+jsonrpsee.workspace = true
+jsonrpsee.features = ["server"]
+pretty_env_logger.workspace = true
+structopt.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio.features = ["macros", "rt-multi-thread"]
+tracing.workspace = true
+
+api.workspace = true
+node.workspace = true
+
+api.features = ["server"]
+
+
+[workspace]
+resolver = "2"
+members = [".", "crates/*"]
+
+[workspace.dependencies]
+alloy-primitives = "^0.7"
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "8c9dd0a" }
+alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/alloy", rev = "8c9dd0a" }
+async-trait = "^0.1"
+dotenv = "^0.15"
+futures = "^0.3"
+jsonrpsee = "^0.20"
+pretty_env_logger = "^0.5"
+reth-primitives = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05"}
+reth-rpc-api = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05"}
+reth-rpc-types = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05"}
+reth-node-api = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05"}
+serde = "^1"
+serde_json = "^1"
+structopt = "^0.3"
+thiserror = "^1"
+tokio = "^1"
+tracing = "^0.1"
+
+api.path = "crates/api"
+node.path = "crates/node"
