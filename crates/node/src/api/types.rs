@@ -17,9 +17,9 @@ impl EngineTypes for RedstoneSequencerEngine {
     type PayloadBuilderAttributes = RedstoneSequencerPayloadBuilderAttributes;
 
     fn validate_version_specific_fields(
-        chain_spec: &ChainSpec,
-        version: reth_node_api::EngineApiMessageVersion,
-        payload_or_attrs: reth_node_api::PayloadOrAttributes<'_, Self::PayloadAttributes>,
+        _chain_spec: &ChainSpec,
+        _version: reth_node_api::EngineApiMessageVersion,
+        _payload_or_attrs: reth_node_api::PayloadOrAttributes<'_, Self::PayloadAttributes>,
     ) -> Result<(), reth_node_api::EngineObjectValidationError> {
         unimplemented!()
     }
@@ -61,8 +61,8 @@ impl PayloadAttributes for RedstoneSequencerPayloadAttributes {
     }
     fn ensure_well_formed_attributes(
         &self,
-        chain_spec: &ChainSpec,
-        version: reth_node_api::EngineApiMessageVersion,
+        _chain_spec: &ChainSpec,
+        _version: reth_node_api::EngineApiMessageVersion,
     ) -> Result<(), reth_node_api::EngineObjectValidationError> {
         unimplemented!()
     }
@@ -76,8 +76,8 @@ impl PayloadBuilderAttributes for RedstoneSequencerPayloadBuilderAttributes {
     type RpcPayloadAttributes = RedstoneSequencerPayloadAttributes;
 
     fn try_new(
-        parent: B256,
-        rpc_payload_attributes: Self::RpcPayloadAttributes,
+        _parent: B256,
+        _rpc_payload_attributes: Self::RpcPayloadAttributes,
     ) -> Result<Self, Self::Error>
     where
         Self: Sized,
@@ -115,8 +115,8 @@ impl PayloadBuilderAttributes for RedstoneSequencerPayloadBuilderAttributes {
 
     fn cfg_and_block_env(
         &self,
-        chain_spec: &ChainSpec,
-        parent: &reth_primitives::Header,
+        _chain_spec: &ChainSpec,
+        _parent: &reth_primitives::Header,
     ) -> (
         reth_primitives::revm_primitives::CfgEnvWithHandlerCfg,
         reth_primitives::revm_primitives::BlockEnv,

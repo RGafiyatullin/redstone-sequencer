@@ -15,91 +15,91 @@ use super::Api;
 
 #[async_trait::async_trait]
 impl EngineApiServer<RedstoneSequencerEngine> for Api {
-    async fn new_payload_v1(&self, payload: ExecutionPayloadV1) -> RpcResult<PayloadStatus> {
+    async fn new_payload_v1(&self, _payload: ExecutionPayloadV1) -> RpcResult<PayloadStatus> {
         unimplemented!()
     }
 
-    async fn new_payload_v2(&self, payload: ExecutionPayloadInputV2) -> RpcResult<PayloadStatus> {
+    async fn new_payload_v2(&self, _payload: ExecutionPayloadInputV2) -> RpcResult<PayloadStatus> {
         unimplemented!()
     }
 
     async fn new_payload_v3(
         &self,
-        payload: ExecutionPayloadV3,
-        versioned_hashes: Vec<B256>,
-        parent_beacon_block_root: B256,
+        _payload: ExecutionPayloadV3,
+        _versioned_hashes: Vec<B256>,
+        _parent_beacon_block_root: B256,
     ) -> RpcResult<PayloadStatus> {
         unimplemented!()
     }
 
     async fn fork_choice_updated_v1(
         &self,
-        fork_choice_state: ForkchoiceState,
-        payload_attributes: Option<<RedstoneSequencerEngine as EngineTypes>::PayloadAttributes>,
+        _fork_choice_state: ForkchoiceState,
+        _payload_attributes: Option<<RedstoneSequencerEngine as EngineTypes>::PayloadAttributes>,
     ) -> RpcResult<ForkchoiceUpdated> {
         unimplemented!()
     }
 
     async fn fork_choice_updated_v2(
         &self,
-        fork_choice_state: ForkchoiceState,
-        payload_attributes: Option<<RedstoneSequencerEngine as EngineTypes>::PayloadAttributes>,
+        _fork_choice_state: ForkchoiceState,
+        _payload_attributes: Option<<RedstoneSequencerEngine as EngineTypes>::PayloadAttributes>,
     ) -> RpcResult<ForkchoiceUpdated> {
         unimplemented!()
     }
 
     async fn fork_choice_updated_v3(
         &self,
-        fork_choice_state: ForkchoiceState,
-        payload_attributes: Option<<RedstoneSequencerEngine as EngineTypes>::PayloadAttributes>,
+        _fork_choice_state: ForkchoiceState,
+        _payload_attributes: Option<<RedstoneSequencerEngine as EngineTypes>::PayloadAttributes>,
     ) -> RpcResult<ForkchoiceUpdated> {
         unimplemented!()
     }
 
     async fn get_payload_v1(
         &self,
-        payload_id: PayloadId,
+        _payload_id: PayloadId,
     ) -> RpcResult<<RedstoneSequencerEngine as EngineTypes>::ExecutionPayloadV1> {
         unimplemented!()
     }
 
     async fn get_payload_v2(
         &self,
-        payload_id: PayloadId,
+        _payload_id: PayloadId,
     ) -> RpcResult<<RedstoneSequencerEngine as EngineTypes>::ExecutionPayloadV2> {
         unimplemented!()
     }
 
     async fn get_payload_v3(
         &self,
-        payload_id: PayloadId,
+        _payload_id: PayloadId,
     ) -> RpcResult<<RedstoneSequencerEngine as EngineTypes>::ExecutionPayloadV3> {
         unimplemented!()
     }
 
     async fn get_payload_bodies_by_hash_v1(
         &self,
-        block_hashes: Vec<BlockHash>,
+        _block_hashes: Vec<BlockHash>,
     ) -> RpcResult<ExecutionPayloadBodiesV1> {
         unimplemented!()
     }
 
     async fn get_payload_bodies_by_range_v1(
         &self,
-        start: U64,
-        count: U64,
+        _start: U64,
+        _count: U64,
     ) -> RpcResult<ExecutionPayloadBodiesV1> {
         unimplemented!()
     }
 
     async fn exchange_transition_configuration(
         &self,
-        transition_configuration: TransitionConfiguration,
+        _transition_configuration: TransitionConfiguration,
     ) -> RpcResult<TransitionConfiguration> {
         unimplemented!()
     }
 
-    async fn exchange_capabilities(&self, capabilities: Vec<String>) -> RpcResult<Vec<String>> {
+    async fn exchange_capabilities(&self, _capabilities: Vec<String>) -> RpcResult<Vec<String>> {
         unimplemented!()
     }
 }
