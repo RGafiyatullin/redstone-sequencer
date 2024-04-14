@@ -1,7 +1,8 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, path::PathBuf};
 
 use jsonrpsee::RpcModule;
 use node::api::{EngineApiServer, EthApiServer};
+use reth_rpc::JwtSecret;
 use structopt::StructOpt;
 
 use crate::{AnyError, Cli};
@@ -16,6 +17,9 @@ pub struct Node {
     #[structopt(long, env = "RPC_BIND_ADDR_B", default_value = "0.0.0.0:8545")]
     rpc_bind_addr_b: SocketAddr,
 
+    #[structopt(long, env = "BACKEND_ENGINE_API_JWT_SECRET_PATH")]
+    engine_api_secret_path: PathBuf,
+
     #[structopt(long, env = "BACKEND_ENGINE_API_URL")]
     engine_api_url: String,
 
@@ -25,7 +29,8 @@ pub struct Node {
 
 impl Node {
     pub async fn run(&self, _cli: &Cli) -> Result<(), AnyError> {
-        let api = node::api::Api::new(&self.eth_api_url).await?;
+        let jwt_secret = JwtSecret::from_file(self.engine_api_secret_path.as_ref())?;
+        let api = node::api::Api::new(&self.eth_api_url, &self.engine_api_url, jwt_secret).await?;
 
         let mut rpc_module_a = RpcModule::new(());
         let mut rpc_module_b = RpcModule::new(());

@@ -8,98 +8,145 @@ use alloy_rpc_types_engine::{
 };
 use jsonrpsee::core::RpcResult;
 use reth_node_api::EngineTypes;
-use reth_rpc_api::EngineApiServer;
+use reth_rpc_api::{EngineApiClient, EngineApiServer};
 
-use super::types::RedstoneSequencerEngine;
+use reth_node_optimism::OptimismEngineTypes;
+
+use super::to_error_object;
 use super::Api;
 
+impl Api {
+    fn engine_api(&self) -> &impl EngineApiClient<OptimismEngineTypes> {
+        &self.0.engine_api_client
+    }
+}
+
 #[async_trait::async_trait]
-impl EngineApiServer<RedstoneSequencerEngine> for Api {
-    async fn new_payload_v1(&self, _payload: ExecutionPayloadV1) -> RpcResult<PayloadStatus> {
-        unimplemented!()
+impl EngineApiServer<OptimismEngineTypes> for Api {
+    async fn new_payload_v1(&self, payload: ExecutionPayloadV1) -> RpcResult<PayloadStatus> {
+        self.engine_api()
+            .new_payload_v1(payload)
+            .await
+            .map_err(to_error_object)
     }
 
-    async fn new_payload_v2(&self, _payload: ExecutionPayloadInputV2) -> RpcResult<PayloadStatus> {
-        unimplemented!()
+    async fn new_payload_v2(&self, payload: ExecutionPayloadInputV2) -> RpcResult<PayloadStatus> {
+        self.engine_api()
+            .new_payload_v2(payload)
+            .await
+            .map_err(to_error_object)
     }
 
     async fn new_payload_v3(
         &self,
-        _payload: ExecutionPayloadV3,
-        _versioned_hashes: Vec<B256>,
-        _parent_beacon_block_root: B256,
+        payload: ExecutionPayloadV3,
+        versioned_hashes: Vec<B256>,
+        parent_beacon_block_root: B256,
     ) -> RpcResult<PayloadStatus> {
-        unimplemented!()
+        self.engine_api()
+            .new_payload_v3(payload, versioned_hashes, parent_beacon_block_root)
+            .await
+            .map_err(to_error_object)
     }
 
     async fn fork_choice_updated_v1(
         &self,
-        _fork_choice_state: ForkchoiceState,
-        _payload_attributes: Option<<RedstoneSequencerEngine as EngineTypes>::PayloadAttributes>,
+        fork_choice_state: ForkchoiceState,
+        payload_attributes: Option<<OptimismEngineTypes as EngineTypes>::PayloadAttributes>,
     ) -> RpcResult<ForkchoiceUpdated> {
-        unimplemented!()
+        self.engine_api()
+            .fork_choice_updated_v1(fork_choice_state, payload_attributes)
+            .await
+            .map_err(to_error_object)
     }
 
     async fn fork_choice_updated_v2(
         &self,
-        _fork_choice_state: ForkchoiceState,
-        _payload_attributes: Option<<RedstoneSequencerEngine as EngineTypes>::PayloadAttributes>,
+        fork_choice_state: ForkchoiceState,
+        payload_attributes: Option<<OptimismEngineTypes as EngineTypes>::PayloadAttributes>,
     ) -> RpcResult<ForkchoiceUpdated> {
-        unimplemented!()
+        self.engine_api()
+            .fork_choice_updated_v2(fork_choice_state, payload_attributes)
+            .await
+            .map_err(to_error_object)
     }
 
     async fn fork_choice_updated_v3(
         &self,
-        _fork_choice_state: ForkchoiceState,
-        _payload_attributes: Option<<RedstoneSequencerEngine as EngineTypes>::PayloadAttributes>,
+        fork_choice_state: ForkchoiceState,
+        payload_attributes: Option<<OptimismEngineTypes as EngineTypes>::PayloadAttributes>,
     ) -> RpcResult<ForkchoiceUpdated> {
-        unimplemented!()
+        self.engine_api()
+            .fork_choice_updated_v3(fork_choice_state, payload_attributes)
+            .await
+            .map_err(to_error_object)
     }
 
     async fn get_payload_v1(
         &self,
-        _payload_id: PayloadId,
-    ) -> RpcResult<<RedstoneSequencerEngine as EngineTypes>::ExecutionPayloadV1> {
-        unimplemented!()
+        payload_id: PayloadId,
+    ) -> RpcResult<<OptimismEngineTypes as EngineTypes>::ExecutionPayloadV1> {
+        self.engine_api()
+            .get_payload_v1(payload_id)
+            .await
+            .map_err(to_error_object)
     }
 
     async fn get_payload_v2(
         &self,
-        _payload_id: PayloadId,
-    ) -> RpcResult<<RedstoneSequencerEngine as EngineTypes>::ExecutionPayloadV2> {
-        unimplemented!()
+        payload_id: PayloadId,
+    ) -> RpcResult<<OptimismEngineTypes as EngineTypes>::ExecutionPayloadV2> {
+        self.engine_api()
+            .get_payload_v2(payload_id)
+            .await
+            .map_err(to_error_object)
     }
 
     async fn get_payload_v3(
         &self,
-        _payload_id: PayloadId,
-    ) -> RpcResult<<RedstoneSequencerEngine as EngineTypes>::ExecutionPayloadV3> {
-        unimplemented!()
+        payload_id: PayloadId,
+    ) -> RpcResult<<OptimismEngineTypes as EngineTypes>::ExecutionPayloadV3> {
+        self.engine_api()
+            .get_payload_v3(payload_id)
+            .await
+            .map_err(to_error_object)
     }
 
     async fn get_payload_bodies_by_hash_v1(
         &self,
-        _block_hashes: Vec<BlockHash>,
+        block_hashes: Vec<BlockHash>,
     ) -> RpcResult<ExecutionPayloadBodiesV1> {
-        unimplemented!()
+        self.engine_api()
+            .get_payload_bodies_by_hash_v1(block_hashes)
+            .await
+            .map_err(to_error_object)
     }
 
     async fn get_payload_bodies_by_range_v1(
         &self,
-        _start: U64,
-        _count: U64,
+        start: U64,
+        count: U64,
     ) -> RpcResult<ExecutionPayloadBodiesV1> {
-        unimplemented!()
+        self.engine_api()
+            .get_payload_bodies_by_range_v1(start, count)
+            .await
+            .map_err(to_error_object)
     }
 
     async fn exchange_transition_configuration(
         &self,
-        _transition_configuration: TransitionConfiguration,
+        transition_configuration: TransitionConfiguration,
     ) -> RpcResult<TransitionConfiguration> {
-        unimplemented!()
+        self.engine_api()
+            .exchange_transition_configuration(transition_configuration)
+            .await
+            .map_err(to_error_object)
     }
 
-    async fn exchange_capabilities(&self, _capabilities: Vec<String>) -> RpcResult<Vec<String>> {
-        unimplemented!()
+    async fn exchange_capabilities(&self, capabilities: Vec<String>) -> RpcResult<Vec<String>> {
+        self.engine_api()
+            .exchange_capabilities(capabilities)
+            .await
+            .map_err(to_error_object)
     }
 }

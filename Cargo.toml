@@ -12,6 +12,7 @@ dotenv.workspace = true
 jsonrpsee.workspace = true
 jsonrpsee.features = ["server"]
 pretty_env_logger.workspace = true
+reth-rpc.workspace = true
 structopt.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
@@ -37,15 +38,18 @@ dotenv = "^0.15"
 futures = "^0.3"
 jsonrpsee = "^0.20"
 pretty_env_logger = "^0.5"
+reth-node-api = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05"}
+reth-node-optimism = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05", features = ["optimism"]}
 reth-primitives = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05"}
+reth-rpc = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05"}
 reth-rpc-api = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05"}
 reth-rpc-types = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05"}
-reth-node-api = {git = "https://github.com/paradigmxyz/reth.git", rev = "57e25be05"}
 serde = "^1"
 serde_json = "^1"
 structopt = "^0.3"
 thiserror = "^1"
 tokio = "^1"
+tower = "^0.4"
 tracing = "^0.1"
 
 api.path = "crates/api"
