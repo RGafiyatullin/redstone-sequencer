@@ -23,7 +23,7 @@ impl Api {
         engine_api_secret: JwtSecret,
     ) -> Result<Self, AnyError> {
         let engine_api_client = jsonrpsee::http_client::HttpClient::<HttpBackend>::builder()
-            .set_middleware(
+            .set_http_middleware(
                 tower::ServiceBuilder::new()
                     .layer(crate::auth_layer::EngineAuthLayer::new(engine_api_secret)),
             )
@@ -45,11 +45,11 @@ struct Inner {
     engine_api_client: HttpClient<AddJwtHeader<HttpBackend>>,
 }
 
-fn to_error_object(error: jsonrpsee::core::Error) -> jsonrpsee::types::ErrorObjectOwned {
-    use jsonrpsee::core::Error;
+fn to_error_object(error: jsonrpsee::core::ClientError) -> jsonrpsee::types::ErrorObjectOwned {
+    use jsonrpsee::core::ClientError;
     use jsonrpsee::types::ErrorObject;
 
-    if let Error::Call(error_object) = error {
+    if let ClientError::Call(error_object) = error {
         error_object
     } else {
         ErrorObject::owned(-32000, error.to_string(), Some(""))
