@@ -1,12 +1,23 @@
 
 
 
-# [patch."https://github.com/paradigmxyz/reth.git"]
-# reth-node-api = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "main" }
-# reth-node-optimism = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "main" }
-# reth-primitives = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "main" }
-# reth-rpc = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "main" }
-# reth-rpc-api = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "main" }
-# reth-rpc-types = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "main" }
+[patch."https://github.com/paradigmxyz/reth.git"]
+reth-node-api = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+reth-node-optimism = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+reth-primitives = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+reth-rpc = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+reth-rpc-api = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+reth-rpc-types = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
 
-# [patch."https://github.com/alloy-rs/alloy"]
+[patch."https://github.com/alloy-rs/alloy"]
+alloy-rpc-types = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+alloy-rpc-types-anvil = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+alloy-rpc-types-trace = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+alloy-rpc-types-engine = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+alloy-genesis = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+# alloy-node-bindings = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+# alloy-provider = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+alloy-eips = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+# alloy-signer = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+# alloy-network = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+alloy-consensus = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
