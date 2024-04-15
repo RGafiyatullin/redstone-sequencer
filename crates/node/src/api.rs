@@ -1,5 +1,6 @@
 mod engine_api;
 mod eth_api;
+mod eth_filter_api;
 
 use std::sync::Arc;
 
@@ -9,6 +10,7 @@ use jsonrpsee::http_client::HttpClient;
 use reth_rpc::JwtSecret;
 pub use reth_rpc_api::EngineApiServer;
 pub use reth_rpc_api::EthApiServer;
+pub use reth_rpc_api::EthFilterApiServer;
 
 use crate::auth_layer::AddJwtHeader;
 use crate::AnyError;

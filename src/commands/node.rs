@@ -1,6 +1,7 @@
 use std::{net::SocketAddr, path::PathBuf};
 
 use jsonrpsee::RpcModule;
+use node::api::EthFilterApiServer;
 use node::api::{EngineApiServer, EthApiServer};
 use reth_rpc::JwtSecret;
 use structopt::StructOpt;
@@ -37,8 +38,10 @@ impl Node {
 
         rpc_module_a.merge(EthApiServer::into_rpc(api.clone()))?;
         rpc_module_a.merge(EngineApiServer::into_rpc(api.clone()))?;
+        rpc_module_a.merge(EthFilterApiServer::into_rpc(api.clone()))?;
 
-        rpc_module_b.merge(EthApiServer::into_rpc(api))?;
+        rpc_module_b.merge(EthApiServer::into_rpc(api.clone()))?;
+        rpc_module_b.merge(EthFilterApiServer::into_rpc(api))?;
 
         tracing::info!("Binding {} for RPC server [A]", self.rpc_bind_addr_a);
         let rpc_server_a = jsonrpsee::server::ServerBuilder::new()
