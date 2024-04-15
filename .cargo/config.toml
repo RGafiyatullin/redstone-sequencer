@@ -1,23 +1,36 @@
 
 
 
+# [patch."https://github.com/paradigmxyz/reth.git"]
+# reth-node-api = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+# reth-node-optimism = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+# reth-primitives = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+# reth-rpc = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+# reth-rpc-api = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+# reth-rpc-types = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+
+# [patch."https://github.com/alloy-rs/alloy"]
+# alloy-rpc-types = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+# alloy-rpc-types-anvil = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+# alloy-rpc-types-trace = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+# alloy-rpc-types-engine = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+# alloy-genesis = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+# alloy-eips = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+# alloy-consensus = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+
 [patch."https://github.com/paradigmxyz/reth.git"]
-reth-node-api = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
-reth-node-optimism = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
-reth-primitives = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
-reth-rpc = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
-reth-rpc-api = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
-reth-rpc-types = { git = "file:///Users/rg/Projects/xyz.lattice/reth", branch = "thatroma/redstone-sequencer" }
+reth-node-api = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+reth-node-optimism = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+reth-primitives = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+reth-rpc = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+reth-rpc-api = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+reth-rpc-types = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
 
 [patch."https://github.com/alloy-rs/alloy"]
-alloy-rpc-types = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
-alloy-rpc-types-anvil = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
-alloy-rpc-types-trace = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
-alloy-rpc-types-engine = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
-alloy-genesis = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
-# alloy-node-bindings = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
-# alloy-provider = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
-alloy-eips = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
-# alloy-signer = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
-# alloy-network = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
-alloy-consensus = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
+alloy-rpc-types = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
+alloy-rpc-types-anvil = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
+alloy-rpc-types-trace = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
+alloy-rpc-types-engine = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
+alloy-genesis = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
+alloy-eips = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
+alloy-consensus = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
