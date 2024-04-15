@@ -39,7 +39,7 @@ futures = "^0.3"
 jsonrpsee = "^0.22"
 pretty_env_logger = "^0.5"
 reth-node-api = {git = "https://github.com/paradigmxyz/reth.git", rev = "a2654650b"}
-reth-node-optimism = {git = "https://github.com/paradigmxyz/reth.git", rev = "a2654650b", features = ["optimism"]}
+reth-node-optimism = {git = "https://github.com/paradigmxyz/reth.git", rev = "a2654650b"}
 reth-primitives = {git = "https://github.com/paradigmxyz/reth.git", rev = "a2654650b"}
 reth-rpc = {git = "https://github.com/paradigmxyz/reth.git", rev = "a2654650b"}
 reth-rpc-api = {git = "https://github.com/paradigmxyz/reth.git", rev = "a2654650b"}

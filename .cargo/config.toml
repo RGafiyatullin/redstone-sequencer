@@ -18,19 +18,19 @@
 # alloy-eips = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
 # alloy-consensus = {git = "file:///Users/rg/Projects/xyz.lattice/alloy", branch = "thatroma/redstone-sequencer"}
 
-[patch."https://github.com/paradigmxyz/reth.git"]
-reth-node-api = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
-reth-node-optimism = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
-reth-primitives = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
-reth-rpc = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
-reth-rpc-api = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
-reth-rpc-types = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+# [patch."https://github.com/paradigmxyz/reth.git"]
+# reth-node-api = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+# reth-node-optimism = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+# reth-primitives = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+# reth-rpc = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+# reth-rpc-api = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
+# reth-rpc-types = { git = "https://github.com/RGafiyatullin/paradigmxyz_reth.git", rev = "02de508a8" }
 
 [patch."https://github.com/alloy-rs/alloy"]
-alloy-rpc-types = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
-alloy-rpc-types-anvil = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
-alloy-rpc-types-trace = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
-alloy-rpc-types-engine = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
-alloy-genesis = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
-alloy-eips = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
-alloy-consensus = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "84ab847e"}
+alloy-rpc-types = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "a2311044"}
+alloy-rpc-types-anvil = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "a2311044"}
+alloy-rpc-types-trace = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "a2311044"}
+alloy-rpc-types-engine = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "a2311044"}
+alloy-genesis = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "a2311044"}
+alloy-eips = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "a2311044"}
+alloy-consensus = {git = "https://github.com/RGafiyatullin/alloy-rs_alloy.git", rev = "a2311044"}
