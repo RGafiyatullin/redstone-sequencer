@@ -3,10 +3,12 @@ mod eth_api;
 mod eth_filter_api;
 
 use std::sync::Arc;
+use std::sync::RwLock;
 
 use jsonrpsee::http_client::transport::HttpBackend;
 use jsonrpsee::http_client::HttpClient;
 
+use reth_primitives::U256;
 use reth_rpc::JwtSecret;
 pub use reth_rpc_api::EngineApiServer;
 pub use reth_rpc_api::EthApiServer;
@@ -35,16 +37,22 @@ impl Api {
             jsonrpsee::http_client::HttpClient::<HttpBackend>::builder().build(eth_api_url)?;
 
         Ok(Self(Arc::new(Inner {
-            eth_api_client,
-            engine_api_client,
+            anonymous_client: eth_api_client,
+            authenticated_client: engine_api_client,
+            current_block_number: Default::default(),
         })))
+    }
+
+    pub fn set_current_block_number(&self, block_number: U256) {
+        *self.0.current_block_number.write().expect("rw-lock.write -> poisoned") = block_number;
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Inner {
-    eth_api_client: HttpClient<HttpBackend>,
-    engine_api_client: HttpClient<AddJwtHeader<HttpBackend>>,
+    anonymous_client: HttpClient<HttpBackend>,
+    authenticated_client: HttpClient<AddJwtHeader<HttpBackend>>,
+    current_block_number: RwLock<U256>,
 }
 
 fn to_error_object(error: jsonrpsee::core::ClientError) -> jsonrpsee::types::ErrorObjectOwned {

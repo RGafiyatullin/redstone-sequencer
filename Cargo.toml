@@ -9,21 +9,24 @@ edition = "2021"
 async-trait.workspace = true
 alloy-primitives.workspace = true
 dotenv.workspace = true
+futures.workspace = true
+humantime.workspace = true
 jsonrpsee.workspace = true
-jsonrpsee.features = ["server"]
 pretty_env_logger.workspace = true
 reth-rpc.workspace = true
+reth-rpc-api.workspace = true
 structopt.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
-tokio.features = ["macros", "rt-multi-thread"]
 tracing.workspace = true
 
 api.workspace = true
 node.workspace = true
 
 api.features = ["server"]
-
+jsonrpsee.features = ["server"]
+reth-rpc-api.features = ["client"]
+tokio.features = ["macros", "rt-multi-thread"]
 
 [workspace]
 resolver = "2"
@@ -36,6 +39,7 @@ alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/alloy", rev = "8cb
 async-trait = "^0.1"
 dotenv = "^0.15"
 futures = "^0.3"
+humantime = "^2"
 jsonrpsee = "^0.22"
 pretty_env_logger = "^0.5"
 reth-node-api = {git = "https://github.com/paradigmxyz/reth.git", rev = "a2654650b"}
