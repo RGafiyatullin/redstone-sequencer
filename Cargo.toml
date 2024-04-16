@@ -20,10 +20,8 @@ thiserror.workspace = true
 tokio.workspace = true
 tracing.workspace = true
 
-api.workspace = true
 node.workspace = true
 
-api.features = ["server"]
 jsonrpsee.features = ["server"]
 reth-rpc-api.features = ["client"]
 tokio.features = ["macros", "rt-multi-thread"]
@@ -56,5 +54,4 @@ tokio = "^1"
 tower = "^0.4"
 tracing = "^0.1"
 
-api.path = "crates/api"
 node.path = "crates/node"
