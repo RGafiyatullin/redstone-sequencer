@@ -1,7 +1,7 @@
 #!/bin/sh
 
 BUILDER_IMAGE=${BUILDER_IMAGE:-'build-redstone-sequencer:dev'}
-TARGET_DIR_VOLUME=${TARGET_DIR_VOLUME:-'ops-bedrock_rs_build'}
+TARGET_DIR_VOLUME=${TARGET_DIR_VOLUME:-'build-redstone-sequencer_target_dir'}
 DOCKER=${DOCKER:-docker}
 
 

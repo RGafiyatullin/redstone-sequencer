@@ -44,7 +44,11 @@ impl Api {
     }
 
     pub fn set_current_block_number(&self, block_number: U256) {
-        *self.0.current_block_number.write().expect("rw-lock.write -> poisoned") = block_number;
+        *self
+            .0
+            .current_block_number
+            .write()
+            .expect("rw-lock.write -> poisoned") = block_number;
     }
 }
 

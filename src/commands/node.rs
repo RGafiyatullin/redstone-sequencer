@@ -1,4 +1,3 @@
-
 use std::{net::SocketAddr, path::PathBuf};
 
 use humantime::Duration;
@@ -75,7 +74,7 @@ impl Node {
         };
         let block_num_being_updated = async move {
             let mut ticks = tokio::time::interval(*self.backend_poll_interval);
-            
+
             loop {
                 let _ = ticks.tick().await;
                 let block_number = match api.backend_eth_api().block_number().await {
