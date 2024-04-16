@@ -1,10 +1,14 @@
 use std::future::Future;
 
+use tokio::sync::mpsc;
+
 use crate::{upstream::Upstream, AnyError};
 
 pub mod query;
 pub use query::Query;
-use tokio::sync::mpsc;
+
+mod pool;
+use pool::Pool;
 
 const QUERY_CHANNEL_BUFFER_SIZE: usize = 1024;
 
@@ -21,7 +25,7 @@ pub struct Sequencer {
     query_tx: mpsc::Sender<Query>,
 }
 
-async fn run(_query_rx: mpsc::Receiver<Query>, _upstream: Upstream) -> Result<(), AnyError> {
+async fn run(query_rx: mpsc::Receiver<Query>, upstream: Upstream) -> Result<(), AnyError> {
     tracing::info!("Starting sequencer...");
 
     std::future::pending().await
