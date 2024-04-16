@@ -17,7 +17,7 @@ use super::Api;
 
 impl Api {
     pub fn backend_engine_api(&self) -> &impl EngineApiClient<OptimismEngineTypes> {
-        &self.0.authenticated_client
+        self.upstream().authenticated_client()
     }
 }
 

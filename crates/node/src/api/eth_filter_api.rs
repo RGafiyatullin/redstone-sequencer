@@ -8,7 +8,7 @@ use super::{to_error_object, Api};
 
 impl Api {
     pub fn backend_eth_filter_api(&self) -> &impl EthFilterApiClient {
-        &self.0.anonymous_client
+        self.upstream().anonymous_client()
     }
 }
 

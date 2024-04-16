@@ -1,11 +1,10 @@
 use std::{net::SocketAddr, path::PathBuf};
 
-use humantime::Duration;
 use jsonrpsee::RpcModule;
-use node::api::EthFilterApiServer;
+use node::api::{Api, EthFilterApiServer};
 use node::api::{EngineApiServer, EthApiServer};
+use node::service;
 use reth_rpc::JwtSecret;
-use reth_rpc_api::EngineEthApiClient;
 use structopt::StructOpt;
 
 use crate::{AnyError, Cli};
@@ -28,18 +27,35 @@ pub struct Node {
 
     #[structopt(long, env = "BACKEND_ETH_API_URL")]
     eth_api_url: String,
-
-    #[structopt(long, env = "BACKEND_POLL_INTERVAL", default_value = "1s")]
-    backend_poll_interval: Duration,
 }
 
 impl Node {
     pub async fn run(&self, _cli: &Cli) -> Result<(), AnyError> {
         let jwt_secret = JwtSecret::from_file(self.engine_api_secret_path.as_ref())?;
-        let api = node::api::Api::new(&self.eth_api_url, &self.engine_api_url, jwt_secret).await?;
+        let upstream =
+            node::upstream::Upstream::new(&self.eth_api_url, &self.engine_api_url, jwt_secret)?;
+        let (service, service_running) = service::start(upstream).await?;
+        let api = node::api::Api::new(service)?;
 
-        let mut rpc_module_a = RpcModule::new(());
-        let mut rpc_module_b = RpcModule::new(());
+        let rpc_running = self.run_rpcs(api.clone());
+
+        tokio::select! {
+            rpc_terminated = rpc_running => {
+                let _ = rpc_terminated.inspect_err(|e| tracing::error!("rpc terminated: {}", e));
+            }
+            service_terminated = service_running => {
+                let _ = service_terminated.inspect_err(|e| tracing::error!("service terminated: {}", e));
+            }
+        };
+
+        tracing::info!("Bye!");
+
+        Ok(())
+    }
+
+    async fn run_rpcs(&self, api: Api) -> Result<(), AnyError> {
+        let mut rpc_module_a = RpcModule::new(api.clone());
+        let mut rpc_module_b = RpcModule::new(api.clone());
 
         rpc_module_a.merge(EthApiServer::into_rpc(api.clone()))?;
         rpc_module_a.merge(EngineApiServer::into_rpc(api.clone()))?;
@@ -72,30 +88,10 @@ impl Node {
             rpc_running_b.stopped().await;
             tracing::info!("RPC-server [B] stopped.");
         };
-        let block_num_being_updated = async move {
-            let mut ticks = tokio::time::interval(*self.backend_poll_interval);
-
-            loop {
-                let _ = ticks.tick().await;
-                let block_number = match api.backend_eth_api().block_number().await {
-                    Ok(block_number) => block_number,
-                    Err(reason) => {
-                        tracing::warn!("failed to fetch block-number: {}", reason);
-                        continue;
-                    }
-                };
-                api.set_current_block_number(block_number);
-            }
-        };
 
         tokio::select! {
-            () = rpc_stopped_a => {},
-            () = rpc_stopped_b => {},
-            () = block_num_being_updated => {},
-        };
-
-        tracing::info!("Bye!");
-
-        Ok(())
+            () = rpc_stopped_a => { Err("RPC-server [A] stopped".into()) },
+            () = rpc_stopped_b => { Err("RPC-server [B] stopped".into()) },
+        }
     }
 }

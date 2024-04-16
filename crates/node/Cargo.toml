@@ -10,6 +10,7 @@ alloy-primitives.workspace = true
 alloy-rpc-types.workspace = true
 alloy-rpc-types-engine.workspace = true
 async-trait.workspace = true
+futures.workspace = true
 http = "0.2.8"
 http-body = "0.4.5"
 jsonrpsee.workspace = true
@@ -22,6 +23,7 @@ reth-rpc-types.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tower.workspace = true
+tokio.workspace = true
 tracing.workspace = true
 
 
@@ -33,3 +35,4 @@ reth-node-optimism.features = ["optimism"]
 reth-rpc-api.features = ["client"]
 reth-rpc-types.features = ["ssz"]
 serde.features = ["derive"]
+tokio.features = ["sync"]

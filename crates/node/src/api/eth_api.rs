@@ -24,6 +24,8 @@ use alloy_rpc_types::Work;
 use jsonrpsee::core::RpcResult;
 use reth_primitives::serde_helper::JsonStorageKey;
 use reth_primitives::serde_helper::U64HexOrNumber;
+use reth_primitives::PooledTransactionsElement;
+use reth_rpc::eth::error::EthApiError;
 use reth_rpc_api::EthApiClient;
 use reth_rpc_api::EthApiServer;
 use reth_rpc_types::AnyTransactionReceipt;
@@ -33,7 +35,7 @@ use super::Api;
 
 impl Api {
     pub fn backend_eth_api(&self) -> &impl EthApiClient {
-        &self.0.anonymous_client
+        self.upstream().anonymous_client()
     }
 }
 
@@ -70,11 +72,7 @@ impl EthApiServer for Api {
         Ok(Default::default())
     }
     fn block_number(&self) -> RpcResult<U256> {
-        let block_number = *self
-            .0
-            .current_block_number
-            .read()
-            .expect("rw-lock.read -> poisoned");
+        let block_number = self.service.current_block_number();
         tracing::trace!(target: "node::api::eth_api::block_number", "CALL [] -> {}", block_number);
         Ok(block_number)
     }
@@ -570,6 +568,12 @@ impl EthApiServer for Api {
     }
     async fn send_raw_transaction(&self, bytes: Bytes) -> RpcResult<B256> {
         tracing::trace!(target: "node::api::eth_api::send_raw_transaction", "CALL [bytes: {:?}]", bytes);
+
+        let pooled_transaction_element = PooledTransactionsElement::decode_enveloped(&mut bytes.as_ref())
+            .inspect_err(|e| tracing::warn!(target: "node::api::eth_api::send_raw_transaction", "BAD-ARG: {}", e))
+            .map_err(|_| EthApiError::FailedToDecodeSignedTransaction)?;
+        tracing::trace!(target: "node::api::eth_api::send_raw_transaction", "decoded: {:?}", pooled_transaction_element);
+
         self.backend_eth_api()
             .send_raw_transaction(bytes)
             .await
