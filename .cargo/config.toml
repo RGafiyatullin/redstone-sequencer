@@ -1,0 +1,32 @@
+[patch.'https://github.com/alloy-rs/alloy']
+alloy-rpc-types = { path = "../alloy/crates/rpc-types" }
+alloy-rpc-types-anvil = { path = "../alloy/crates/rpc-types-anvil" }
+alloy-rpc-types-trace = { path = "../alloy/crates/rpc-types-trace" }
+alloy-rpc-types-engine = { path = "../alloy/crates/rpc-types-engine" }
+alloy-genesis = { path = "../alloy/crates/genesis" }
+alloy-node-bindings = { path = "../alloy/crates/node-bindings" }
+alloy-provider = { path = "../alloy/crates/provider", default-features = false, features = ["reqwest"] }
+alloy-eips = { path = "../alloy/crates/eips" }
+alloy-signer = { path = "../alloy/crates/signer" }
+alloy-signer-wallet = { path = "../alloy/crates/signer-wallet" }
+alloy-network = { path = "../alloy/crates/network" }
+alloy-consensus = { path = "../alloy/crates/consensus" }
+
+[patch.'https://github.com/paradigmxyz/reth']
+reth = { path = "../reth/bin/reth" }
+reth-basic-payload-builder = { path = "../reth/crates/payload/basic" }
+reth-db = { path = "../reth/crates/storage/db" }
+reth-network = { path = "../reth/crates/net/network" }
+reth-node-builder = { path = "../reth/crates/node-builder" }
+reth-node-api = { path = "../reth/crates/node-api" }
+reth-optimism-payload-builder = { path = "../reth/crates/payload/optimism" }
+reth-payload-builder = { path = "../reth/crates/payload/builder" }
+reth-primitives = { path = "../reth/crates/primitives" }
+reth-provider = { path = "../reth/crates/storage/provider" }
+reth-revm = { path = "../reth/crates/revm" }
+reth-rpc = { path = "../reth/crates/rpc/rpc" }
+reth-rpc-api = { path = "../reth/crates/rpc/rpc-api" }
+reth-rpc-types = { path = "../reth/crates/rpc/rpc-types" }
+reth-rpc-types-compat = { path = "../reth/crates/rpc/rpc-types-compat" }
+reth-tracing = { path = "../reth/crates/tracing" }
+reth-transaction-pool = { path = "../reth/crates/transaction-pool" }
