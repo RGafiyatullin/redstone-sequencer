@@ -4780,6 +4780,10 @@ dependencies = [
 name = "redstone-sequencer"
 version = "0.0.1"
 dependencies = [
+ "alloy-eips",
+ "alloy-rlp",
+ "alloy-rpc-types-engine",
+ "alloy-serde",
  "async-trait",
  "clap",
  "eyre",
@@ -4810,6 +4814,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]

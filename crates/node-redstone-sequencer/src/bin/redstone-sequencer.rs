@@ -1,7 +1,7 @@
 #![allow(missing_docs, rustdoc::missing_crate_level_docs)]
 
 use redstone_sequencer::{
-    args::RollupArgs, rpc::SequencerClient, RedstoneEngineTypes, OptimismNode,
+    args::RollupArgs, rpc::SequencerClient, OptimismNode, RedstoneEngineTypes,
 };
 
 use clap::Parser;

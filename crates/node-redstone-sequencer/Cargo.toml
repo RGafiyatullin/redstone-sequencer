@@ -29,6 +29,12 @@ reth-tracing.workspace = true
 reth-transaction-pool.workspace = true
 revm.workspace = true
 
+# alloy
+alloy-eips.workspace = true
+alloy-rlp.workspace = true
+alloy-rpc-types-engine.workspace = true
+alloy-serde.workspace = true
+
 # async
 async-trait.workspace = true
 hyper.workspace = true
@@ -45,6 +51,7 @@ serde_json.workspace = true
 eyre.workspace = true
 parking_lot.workspace = true
 thiserror.workspace = true
+tracing.workspace = true
 jsonrpsee.workspace = true
 
 [dev-dependencies]

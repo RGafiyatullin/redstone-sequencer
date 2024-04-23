@@ -7,6 +7,7 @@ alloy-genesis = { path = "../alloy/crates/genesis" }
 alloy-node-bindings = { path = "../alloy/crates/node-bindings" }
 alloy-provider = { path = "../alloy/crates/provider", default-features = false, features = ["reqwest"] }
 alloy-eips = { path = "../alloy/crates/eips" }
+alloy-serde = { path = "../alloy/crates/serde" }
 alloy-signer = { path = "../alloy/crates/signer" }
 alloy-signer-wallet = { path = "../alloy/crates/signer-wallet" }
 alloy-network = { path = "../alloy/crates/network" }

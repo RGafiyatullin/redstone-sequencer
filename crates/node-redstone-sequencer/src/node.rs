@@ -2,8 +2,9 @@
 
 use crate::{
     args::RollupArgs,
+    payload::RedstonePayloadBuilder,
     txpool::{OpTransactionPool, OpTransactionValidator},
-    RedstoneEngineTypes, OptimismEvmConfig,
+    OptimismEvmConfig, RedstoneEngineTypes,
 };
 use reth_basic_payload_builder::{BasicPayloadJobGenerator, BasicPayloadJobGeneratorConfig};
 use reth_network::{NetworkHandle, NetworkManager};
@@ -191,11 +192,9 @@ where
         ctx: &BuilderContext<Node>,
         pool: Pool,
     ) -> eyre::Result<PayloadBuilderHandle<Node::Engine>> {
-        let payload_builder = reth_optimism_payload_builder::OptimismPayloadBuilder::new(
-            ctx.chain_spec(),
-            ctx.evm_config().clone(),
-        )
-        .set_compute_pending_block(self.compute_pending_block);
+        let payload_builder =
+            RedstonePayloadBuilder::new(ctx.chain_spec(), ctx.evm_config().clone());
+
         let conf = ctx.payload_builder_config();
 
         let payload_job_config = BasicPayloadJobGeneratorConfig::default()
@@ -214,13 +213,15 @@ where
             ctx.chain_spec(),
             payload_builder,
         );
-        let (payload_service, payload_builder) =
-            PayloadBuilderService::new(payload_generator, ctx.provider().canonical_state_stream());
+        // let (payload_service, payload_builder) =
+        //     PayloadBuilderService::new(payload_generator, ctx.provider().canonical_state_stream());
 
-        ctx.task_executor()
-            .spawn_critical("payload builder service", Box::pin(payload_service));
+        // ctx.task_executor()
+        //     .spawn_critical("payload builder service", Box::pin(payload_service));
 
-        Ok(payload_builder)
+        // Ok(payload_builder)
+
+        unimplemented!()
     }
 }
 

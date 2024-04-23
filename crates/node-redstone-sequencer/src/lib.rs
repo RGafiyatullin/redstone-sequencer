@@ -29,6 +29,8 @@ pub mod txpool;
 
 pub mod rpc;
 
+pub mod payload;
+
 pub use reth_optimism_payload_builder::{
     OptimismBuiltPayload, OptimismPayloadBuilder, OptimismPayloadBuilderAttributes,
 };
