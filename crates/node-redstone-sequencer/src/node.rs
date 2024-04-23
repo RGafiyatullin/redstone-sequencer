@@ -41,12 +41,18 @@ impl OptimismNode {
     where
         Node: FullNodeTypes<Engine = OptimismEngineTypes>,
     {
-        let RollupArgs { disable_txpool_gossip, compute_pending_block, .. } = args;
+        let RollupArgs {
+            disable_txpool_gossip,
+            compute_pending_block,
+            ..
+        } = args;
         ComponentsBuilder::default()
             .node_types::<Node>()
             .pool(OptimismPoolBuilder::default())
             .payload(OptimismPayloadBuilder::new(compute_pending_block))
-            .network(OptimismNetworkBuilder { disable_txpool_gossip })
+            .network(OptimismNetworkBuilder {
+                disable_txpool_gossip,
+            })
     }
 }
 
@@ -122,16 +128,17 @@ where
             let transactions_backup_config =
                 reth_transaction_pool::maintain::LocalTransactionBackupConfig::with_local_txs_backup(transactions_path);
 
-            ctx.task_executor().spawn_critical_with_graceful_shutdown_signal(
-                "local transactions backup task",
-                |shutdown| {
-                    reth_transaction_pool::maintain::backup_local_transactions_task(
-                        shutdown,
-                        pool.clone(),
-                        transactions_backup_config,
-                    )
-                },
-            );
+            ctx.task_executor()
+                .spawn_critical_with_graceful_shutdown_signal(
+                    "local transactions backup task",
+                    |shutdown| {
+                        reth_transaction_pool::maintain::backup_local_transactions_task(
+                            shutdown,
+                            pool.clone(),
+                            transactions_backup_config,
+                        )
+                    },
+                );
 
             // spawn the maintenance task
             ctx.task_executor().spawn_critical(
@@ -168,7 +175,9 @@ pub struct OptimismPayloadBuilder {
 impl OptimismPayloadBuilder {
     /// Create a new instance with the given `compute_pending_block` flag.
     pub const fn new(compute_pending_block: bool) -> Self {
-        Self { compute_pending_block }
+        Self {
+            compute_pending_block,
+        }
     }
 }
 
@@ -208,7 +217,8 @@ where
         let (payload_service, payload_builder) =
             PayloadBuilderService::new(payload_generator, ctx.provider().canonical_state_stream());
 
-        ctx.task_executor().spawn_critical("payload builder service", Box::pin(payload_service));
+        ctx.task_executor()
+            .spawn_critical("payload builder service", Box::pin(payload_service));
 
         Ok(payload_builder)
     }
@@ -231,7 +241,9 @@ where
         ctx: &BuilderContext<Node>,
         pool: Pool,
     ) -> eyre::Result<NetworkHandle> {
-        let Self { disable_txpool_gossip } = self;
+        let Self {
+            disable_txpool_gossip,
+        } = self;
         let mut network_config = ctx.network_config()?;
 
         // When `sequencer_endpoint` is configured, the node will forward all transactions to a

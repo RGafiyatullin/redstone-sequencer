@@ -49,13 +49,17 @@ where
     /// Create a new [OpTransactionValidator].
     pub fn new(inner: EthTransactionValidator<Client, Tx>) -> Self {
         let this = Self::with_block_info(inner, OpL1BlockInfo::default());
-        if let Ok(Some(block)) =
-            this.inner.client().block_by_number_or_tag(reth_primitives::BlockNumberOrTag::Latest)
+        if let Ok(Some(block)) = this
+            .inner
+            .client()
+            .block_by_number_or_tag(reth_primitives::BlockNumberOrTag::Latest)
         {
             // genesis block has no txs, so we can't extract L1 info, we set the block info to empty
             // so that we will accept txs into the pool before the first block
             if block.number == 0 {
-                this.block_info.timestamp.store(block.timestamp, Ordering::Relaxed);
+                this.block_info
+                    .timestamp
+                    .store(block.timestamp, Ordering::Relaxed);
                 *this.block_info.l1_block_info.write() = Some(Default::default())
             } else {
                 this.update_l1_block_info(&block);
@@ -70,12 +74,17 @@ where
         inner: EthTransactionValidator<Client, Tx>,
         block_info: OpL1BlockInfo,
     ) -> Self {
-        Self { inner, block_info: Arc::new(block_info) }
+        Self {
+            inner,
+            block_info: Arc::new(block_info),
+        }
     }
 
     /// Update the L1 block info.
     fn update_l1_block_info(&self, block: &Block) {
-        self.block_info.timestamp.store(block.timestamp, Ordering::Relaxed);
+        self.block_info
+            .timestamp
+            .store(block.timestamp, Ordering::Relaxed);
         if let Ok(cost_addition) = reth_revm::optimism::extract_l1_info(block) {
             *self.block_info.l1_block_info.write() = Some(cost_addition);
         }
@@ -96,7 +105,7 @@ where
             return TransactionValidationOutcome::Invalid(
                 transaction,
                 InvalidTransactionError::TxTypeNotSupported.into(),
-            )
+            );
         }
 
         let outcome = self.inner.validate_one(origin, transaction);
@@ -113,11 +122,14 @@ where
                 return TransactionValidationOutcome::Error(
                     *valid_tx.hash(),
                     "L1BlockInfoError".into(),
-                )
+                );
             };
 
             let mut encoded = Vec::new();
-            valid_tx.transaction().to_recovered_transaction().encode_enveloped(&mut encoded);
+            valid_tx
+                .transaction()
+                .to_recovered_transaction()
+                .encode_enveloped(&mut encoded);
 
             let cost_addition = match l1_block_info.l1_tx_data_fee(
                 &self.chain_spec(),
@@ -137,10 +149,14 @@ where
                 return TransactionValidationOutcome::Invalid(
                     valid_tx.into_transaction(),
                     InvalidTransactionError::InsufficientFunds(
-                        GotExpected { got: balance, expected: cost }.into(),
+                        GotExpected {
+                            got: balance,
+                            expected: cost,
+                        }
+                        .into(),
                     )
                     .into(),
-                )
+                );
             }
 
             return TransactionValidationOutcome::Valid {
@@ -148,7 +164,7 @@ where
                 state_nonce,
                 transaction: valid_tx,
                 propagate,
-            }
+            };
         }
 
         outcome
@@ -163,7 +179,10 @@ where
         &self,
         transactions: Vec<(TransactionOrigin, Tx)>,
     ) -> Vec<TransactionValidationOutcome<Tx>> {
-        transactions.into_iter().map(|(origin, tx)| self.validate_one(origin, tx)).collect()
+        transactions
+            .into_iter()
+            .map(|(origin, tx)| self.validate_one(origin, tx))
+            .collect()
     }
 }
 

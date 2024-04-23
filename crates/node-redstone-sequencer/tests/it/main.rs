@@ -27,14 +27,18 @@ fn main() {
     }
 
     if let Err(err) = Cli::<RollupArgs>::parse().run(|builder, rollup_args| async move {
-        let NodeHandle { node, node_exit_future } = builder
+        let NodeHandle {
+            node,
+            node_exit_future,
+        } = builder
             .node(OptimismNode::new(rollup_args.clone()))
             .extend_rpc_modules(move |ctx| {
                 // register sequencer tx forwarder
                 if let Some(sequencer_http) = rollup_args.sequencer_http.clone() {
-                    ctx.registry.set_eth_raw_transaction_forwarder(Arc::new(SequencerClient::new(
-                        sequencer_http,
-                    )));
+                    ctx.registry
+                        .set_eth_raw_transaction_forwarder(Arc::new(SequencerClient::new(
+                            sequencer_http,
+                        )));
                 }
 
                 Ok(())

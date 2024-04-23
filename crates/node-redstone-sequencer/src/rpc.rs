@@ -59,7 +59,9 @@ impl SequencerClient {
             http_client,
             id: AtomicUsize::new(0),
         };
-        Self { inner: Arc::new(inner) }
+        Self {
+            inner: Arc::new(inner),
+        }
     }
 
     /// Returns the network of the client
@@ -74,7 +76,9 @@ impl SequencerClient {
 
     /// Returns the next id for the request
     fn next_request_id(&self) -> usize {
-        self.inner.id.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+        self.inner
+            .id
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst)
     }
 
     /// Forwards a transaction to the sequencer endpoint.
