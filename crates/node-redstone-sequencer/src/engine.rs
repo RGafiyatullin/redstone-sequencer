@@ -15,9 +15,9 @@ use reth_rpc_types::{
 /// The types used in the optimism beacon consensus engine.
 #[derive(Debug, Default, Clone, serde::Deserialize, serde::Serialize)]
 #[non_exhaustive]
-pub struct OptimismEngineTypes;
+pub struct RedstoneEngineTypes;
 
-impl EngineTypes for OptimismEngineTypes {
+impl EngineTypes for RedstoneEngineTypes {
     type PayloadAttributes = OptimismPayloadAttributes;
     type PayloadBuilderAttributes = OptimismPayloadBuilderAttributes;
     type BuiltPayload = OptimismBuiltPayload;

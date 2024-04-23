@@ -3,7 +3,7 @@
 use crate::{
     args::RollupArgs,
     txpool::{OpTransactionPool, OpTransactionValidator},
-    OptimismEngineTypes, OptimismEvmConfig,
+    RedstoneEngineTypes, OptimismEvmConfig,
 };
 use reth_basic_payload_builder::{BasicPayloadJobGenerator, BasicPayloadJobGeneratorConfig};
 use reth_network::{NetworkHandle, NetworkManager};
@@ -39,7 +39,7 @@ impl OptimismNode {
         args: RollupArgs,
     ) -> ComponentsBuilder<Node, OptimismPoolBuilder, OptimismPayloadBuilder, OptimismNetworkBuilder>
     where
-        Node: FullNodeTypes<Engine = OptimismEngineTypes>,
+        Node: FullNodeTypes<Engine = RedstoneEngineTypes>,
     {
         let RollupArgs {
             disable_txpool_gossip,
@@ -58,7 +58,7 @@ impl OptimismNode {
 
 impl<N> Node<N> for OptimismNode
 where
-    N: FullNodeTypes<Engine = OptimismEngineTypes>,
+    N: FullNodeTypes<Engine = RedstoneEngineTypes>,
 {
     type PoolBuilder = OptimismPoolBuilder;
     type NetworkBuilder = OptimismNetworkBuilder;
@@ -74,7 +74,7 @@ where
 
 impl NodeTypes for OptimismNode {
     type Primitives = ();
-    type Engine = OptimismEngineTypes;
+    type Engine = RedstoneEngineTypes;
     type Evm = OptimismEvmConfig;
 
     fn evm_config(&self) -> Self::Evm {
@@ -183,7 +183,7 @@ impl OptimismPayloadBuilder {
 
 impl<Node, Pool> PayloadServiceBuilder<Node, Pool> for OptimismPayloadBuilder
 where
-    Node: FullNodeTypes<Engine = OptimismEngineTypes>,
+    Node: FullNodeTypes<Engine = RedstoneEngineTypes>,
     Pool: TransactionPool + Unpin + 'static,
 {
     async fn spawn_payload_service(

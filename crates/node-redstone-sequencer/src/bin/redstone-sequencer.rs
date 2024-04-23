@@ -1,7 +1,7 @@
 #![allow(missing_docs, rustdoc::missing_crate_level_docs)]
 
 use redstone_sequencer::{
-    args::RollupArgs, rpc::SequencerClient, OptimismEngineTypes, OptimismNode,
+    args::RollupArgs, rpc::SequencerClient, RedstoneEngineTypes, OptimismNode,
 };
 
 use clap::Parser;
@@ -60,7 +60,7 @@ fn main() {
         if node.chain_spec().is_optimism() && !rollup_args.enable_genesis_walkback {
             let client = node.rpc_server_handles.auth.http_client();
             if let Ok(Some(head)) = node.provider.latest_header() {
-                reth_rpc_api::EngineApiClient::<OptimismEngineTypes>::fork_choice_updated_v2(
+                reth_rpc_api::EngineApiClient::<RedstoneEngineTypes>::fork_choice_updated_v2(
                     &client,
                     reth_rpc_types::engine::ForkchoiceState {
                         head_block_hash: head.hash(),

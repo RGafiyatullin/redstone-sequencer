@@ -15,7 +15,7 @@ pub mod args;
 /// Exports optimism-specific implementations of the [EngineTypes](reth_node_api::EngineTypes)
 /// trait.
 pub mod engine;
-pub use engine::OptimismEngineTypes;
+pub use engine::RedstoneEngineTypes;
 
 /// Exports optimism-specific implementations of the
 /// [ConfigureEvmEnv](reth_node_api::ConfigureEvmEnv) trait.
