@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
-use alloy_rpc_types_engine::{ExecutionPayloadEnvelopeV2, OptimismExecutionPayloadEnvelopeV3};
-use reth_node_api::BuiltPayload;
+use alloy_rpc_types_engine::{
+    ExecutionPayloadEnvelopeV2, ExecutionPayloadFieldV2, OptimismExecutionPayloadEnvelopeV3,
+};
+use reth_node_api::{BuiltPayload, PayloadBuilderAttributes};
 use reth_payload_builder::PayloadId;
-use reth_primitives::{BlobTransactionSidecar, ChainSpec, SealedBlock, U256};
-use reth_rpc_types::ExecutionPayloadV1;
+use reth_primitives::{BlobTransactionSidecar, ChainSpec, SealedBlock, B256, U256};
+use reth_rpc_types::{ExecutionPayloadV1, ExecutionPayloadV2};
 
 use super::RedstonePayloadBuilderAttributes;
 
@@ -40,39 +42,66 @@ impl BuiltPayload for RedstoneBuiltPayload {
 impl TryFrom<RedstoneBuiltPayload> for OptimismExecutionPayloadEnvelopeV3 {
     type Error = std::convert::Infallible;
     fn try_from(value: RedstoneBuiltPayload) -> Result<Self, Self::Error> {
-        unimplemented!()
+        let RedstoneBuiltPayload {
+            block,
+            fees,
+            sidecars,
+            chain_spec,
+            attributes,
+            ..
+        } = value;
+
+        let parent_beacon_block_root = attributes
+            .parent_beacon_block_root()
+            .filter(|_| chain_spec.is_cancun_active_at_timestamp(attributes.timestamp()))
+            .unwrap_or(B256::ZERO);
+
+        let execution_payload = reth_rpc_types_compat::engine::payload::block_to_payload_v3(block);
+
+        let out = OptimismExecutionPayloadEnvelopeV3 {
+            execution_payload,
+            block_value: fees,
+            should_override_builder: false,
+            blobs_bundle: sidecars
+                .into_iter()
+                .map(Into::into)
+                .collect::<Vec<_>>()
+                .into(),
+            parent_beacon_block_root,
+        };
+
+        Ok(out)
     }
 }
 
 impl TryFrom<RedstoneBuiltPayload> for ExecutionPayloadEnvelopeV2 {
     type Error = std::convert::Infallible;
-    fn try_from(_value: RedstoneBuiltPayload) -> Result<Self, Self::Error> {
-        unimplemented!()
+    fn try_from(value: RedstoneBuiltPayload) -> Result<Self, Self::Error> {
+        let RedstoneBuiltPayload { block, fees, .. } = value;
+        let execution_payload = if block.withdrawals.is_some() {
+            ExecutionPayloadFieldV2::V2(
+                reth_rpc_types_compat::engine::payload::try_block_to_payload_v2(block),
+            )
+        } else {
+            ExecutionPayloadFieldV2::V1(
+                reth_rpc_types_compat::engine::payload::try_block_to_payload_v1(block),
+            )
+        };
+        let out = Self {
+            block_value: fees,
+            execution_payload,
+        };
+
+        Ok(out)
     }
 }
 
 impl TryFrom<RedstoneBuiltPayload> for ExecutionPayloadV1 {
     type Error = std::convert::Infallible;
     fn try_from(value: RedstoneBuiltPayload) -> Result<Self, Self::Error> {
-        let block = value.block;
-        let transactions = block.raw_transactions();
-        let out = Self {
-            parent_hash: block.parent_hash,
-            fee_recipient: block.beneficiary,
-            state_root: block.state_root,
-            receipts_root: block.receipts_root,
-            logs_bloom: block.logs_bloom,
-            prev_randao: block.mix_hash,
-            block_number: block.number,
-            gas_limit: block.gas_limit,
-            gas_used: block.gas_used,
-            timestamp: block.timestamp,
-            extra_data: block.extra_data.clone(),
-            base_fee_per_gas: U256::from(block.base_fee_per_gas.unwrap_or_default()),
-            block_hash: block.hash(),
-            transactions,
-        };
-
-        Ok(out)
+        let RedstoneBuiltPayload { block, .. } = value;
+        Ok(reth_rpc_types_compat::engine::try_block_to_payload_v1(
+            block,
+        ))
     }
 }
