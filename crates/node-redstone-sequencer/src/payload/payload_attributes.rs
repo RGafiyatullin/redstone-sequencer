@@ -24,20 +24,28 @@ pub struct RedstonePayloadAttributes {
 
 impl PayloadAttributes for RedstonePayloadAttributes {
     fn timestamp(&self) -> u64 {
-        unimplemented!()
+        self.payload_attributes.timestamp()
     }
     fn withdrawals(&self) -> Option<&Vec<Withdrawal>> {
-        unimplemented!()
+        self.payload_attributes.withdrawals()
     }
     fn parent_beacon_block_root(&self) -> Option<B256> {
-        unimplemented!()
+        self.payload_attributes.parent_beacon_block_root()
     }
 
     fn ensure_well_formed_attributes(
         &self,
-        _chain_spec: &ChainSpec,
-        _version: EngineApiMessageVersion,
+        chain_spec: &ChainSpec,
+        version: EngineApiMessageVersion,
     ) -> Result<(), EngineObjectValidationError> {
-        unimplemented!()
+        reth_engine_primitives::validate_version_specific_fields(chain_spec, version, self.into())?;
+
+        if self.gas_limit.is_none() && chain_spec.is_optimism() {
+            return Err(EngineObjectValidationError::InvalidParams(
+                "MissingGasLimitInPayloadAttributes".to_string().into(),
+            ));
+        }
+
+        Ok(())
     }
 }

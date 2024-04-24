@@ -4796,6 +4796,7 @@ dependencies = [
  "reth",
  "reth-basic-payload-builder",
  "reth-db",
+ "reth-engine-primitives",
  "reth-network",
  "reth-node-api",
  "reth-node-builder",

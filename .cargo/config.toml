@@ -17,6 +17,7 @@ alloy-consensus = { path = "../alloy/crates/consensus" }
 reth = { path = "../reth/bin/reth" }
 reth-basic-payload-builder = { path = "../reth/crates/payload/basic" }
 reth-db = { path = "../reth/crates/storage/db" }
+reth-engine-primitives = { path = "../reth/crates/engine-primitives" }
 reth-network = { path = "../reth/crates/net/network" }
 reth-node-builder = { path = "../reth/crates/node-builder" }
 reth-node-api = { path = "../reth/crates/node-api" }

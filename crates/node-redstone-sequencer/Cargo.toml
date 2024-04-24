@@ -13,6 +13,7 @@ workspace = true
 # reth
 reth.workspace = true
 reth-basic-payload-builder.workspace = true
+reth-engine-primitives.workspace = true
 reth-network.workspace = true
 reth-node-builder.workspace = true
 reth-node-api.workspace = true
