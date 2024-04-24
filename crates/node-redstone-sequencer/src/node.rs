@@ -2,11 +2,13 @@
 
 use crate::{
     args::RollupArgs,
-    payload::RedstonePayloadBuilder,
+    payload::{
+        RedstonePayloadBuilder, RedstonePayloadJobGenerator, RedstonePayloadJobGeneratorConfig,
+    },
     txpool::{OpTransactionPool, OpTransactionValidator},
     OptimismEvmConfig, RedstoneEngineTypes,
 };
-use reth_basic_payload_builder::{BasicPayloadJobGenerator, BasicPayloadJobGeneratorConfig};
+
 use reth_network::{NetworkHandle, NetworkManager};
 use reth_node_builder::{
     components::{ComponentsBuilder, NetworkBuilder, PayloadServiceBuilder, PoolBuilder},
@@ -197,15 +199,19 @@ where
 
         let conf = ctx.payload_builder_config();
 
-        let payload_job_config = BasicPayloadJobGeneratorConfig::default()
-            .interval(conf.interval())
-            .deadline(conf.deadline())
-            .max_payload_tasks(conf.max_payload_tasks())
-            // no extradata for OP
-            .extradata(Default::default())
-            .max_gas_limit(conf.max_gas_limit());
+        let payload_job_config = RedstonePayloadJobGeneratorConfig {
+            max_payload_tasks: conf.max_payload_tasks(),
 
-        let payload_generator = BasicPayloadJobGenerator::with_builder(
+            ..Default::default()
+        };
+        // .max_payload_tasks(conf.max_payload_tasks())
+        // .interval(conf.interval())
+        // .deadline(conf.deadline())
+        // // no extradata for OP
+        // .extradata(Default::default())
+        // .max_gas_limit(conf.max_gas_limit())
+
+        let payload_generator = RedstonePayloadJobGenerator::with_builder(
             ctx.provider().clone(),
             pool,
             ctx.task_executor().clone(),
@@ -213,15 +219,16 @@ where
             ctx.chain_spec(),
             payload_builder,
         );
-        // let (payload_service, payload_builder) =
-        //     PayloadBuilderService::new(payload_generator, ctx.provider().canonical_state_stream());
+        let (payload_service, payload_builder) =
+            PayloadBuilderService::<_, _, RedstoneEngineTypes>::new(
+                payload_generator,
+                ctx.provider().canonical_state_stream(),
+            );
 
-        // ctx.task_executor()
-        //     .spawn_critical("payload builder service", Box::pin(payload_service));
+        ctx.task_executor()
+            .spawn_critical("payload builder service", Box::pin(payload_service));
 
-        // Ok(payload_builder)
-
-        unimplemented!()
+        Ok(payload_builder)
     }
 }
 

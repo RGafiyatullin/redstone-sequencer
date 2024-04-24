@@ -12,8 +12,13 @@ use reth_provider::StateProviderFactory;
 use reth_transaction_pool::TransactionPool;
 
 use super::RedstoneBuiltPayload;
-use super::RedstonePayloadBuilder;
 use super::RedstonePayloadBuilderAttributes;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RedstonePayloadBuilder<EvmConfig> {
+    chain_spec: Arc<ChainSpec>,
+    evm_config: EvmConfig,
+}
 
 impl<EvmConfig> RedstonePayloadBuilder<EvmConfig> {
     /// OptimismPayloadBuilder constructor.
@@ -36,7 +41,7 @@ where
 
     fn try_build(
         &self,
-        args: BuildArguments<Pool, Client, Self::Attributes, Self::BuiltPayload>,
+        _args: BuildArguments<Pool, Client, Self::Attributes, Self::BuiltPayload>,
     ) -> Result<BuildOutcome<Self::BuiltPayload>, PayloadBuilderError> {
         unimplemented!()
     }
@@ -56,8 +61,8 @@ where
     }
 
     fn build_empty_payload(
-        client: &Client,
-        config: reth_basic_payload_builder::PayloadConfig<Self::Attributes>,
+        _client: &Client,
+        _config: reth_basic_payload_builder::PayloadConfig<Self::Attributes>,
     ) -> Result<Self::BuiltPayload, PayloadBuilderError> {
         unimplemented!()
     }

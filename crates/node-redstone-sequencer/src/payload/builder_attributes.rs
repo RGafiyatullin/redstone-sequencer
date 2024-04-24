@@ -1,9 +1,17 @@
 use reth_node_api::PayloadBuilderAttributes;
-use reth_payload_builder::PayloadId;
-use reth_primitives::{Address, ChainSpec, Header, Withdrawals, B256};
+use reth_payload_builder::{EthPayloadBuilderAttributes, PayloadId};
+use reth_primitives::{Address, ChainSpec, Header, TransactionSigned, Withdrawals, B256};
 use revm::primitives::{BlockEnv, CfgEnvWithHandlerCfg};
 
-use super::{RedstonePayloadAttributes, RedstonePayloadBuilderAttributes};
+use super::RedstonePayloadAttributes;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RedstonePayloadBuilderAttributes {
+    pub payload_attributes: EthPayloadBuilderAttributes,
+    pub no_tx_pool: bool,
+    pub transactions: Vec<TransactionSigned>,
+    pub gas_limit: Option<u64>,
+}
 
 impl PayloadBuilderAttributes for RedstonePayloadBuilderAttributes {
     type RpcPayloadAttributes = RedstonePayloadAttributes;
@@ -12,7 +20,7 @@ impl PayloadBuilderAttributes for RedstonePayloadBuilderAttributes {
     /// Creates a new payload builder for the given parent block and the attributes.
     ///
     /// Derives the unique [PayloadId] for the given parent and attributes
-    fn try_new(parent: B256, attributes: RedstonePayloadAttributes) -> Result<Self, Self::Error> {
+    fn try_new(_parent: B256, _attributes: RedstonePayloadAttributes) -> Result<Self, Self::Error> {
         // let (id, transactions) = {
         //     let transactions: Vec<_> = attributes
         //         .transactions
@@ -89,8 +97,8 @@ impl PayloadBuilderAttributes for RedstonePayloadBuilderAttributes {
 
     fn cfg_and_block_env(
         &self,
-        chain_spec: &ChainSpec,
-        parent: &Header,
+        _chain_spec: &ChainSpec,
+        _parent: &Header,
     ) -> (CfgEnvWithHandlerCfg, BlockEnv) {
         // // configure evm env based on parent block
         // let mut cfg = CfgEnv::default();

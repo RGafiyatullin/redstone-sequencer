@@ -48,11 +48,14 @@ reqwest = { version = "0.11", default-features = false, features = [
 clap.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+tokio.workspace = true
 eyre.workspace = true
 parking_lot.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 jsonrpsee.workspace = true
+
+tokio.features = ["sync"]
 
 [dev-dependencies]
 reth-db.workspace = true

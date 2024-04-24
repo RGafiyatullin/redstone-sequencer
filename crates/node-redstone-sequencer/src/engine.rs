@@ -3,13 +3,15 @@ use reth_node_api::{
     EngineObjectValidationError, EngineTypes, MessageValidationKind, PayloadOrAttributes,
     VersionSpecificValidationError,
 };
-use reth_optimism_payload_builder::{OptimismBuiltPayload, OptimismPayloadBuilderAttributes};
+
 use reth_primitives::{ChainSpec, Hardfork};
 use reth_rpc_types::{
-    engine::{
-        ExecutionPayloadEnvelopeV2, OptimismExecutionPayloadEnvelopeV3, OptimismPayloadAttributes,
-    },
+    engine::{ExecutionPayloadEnvelopeV2, OptimismExecutionPayloadEnvelopeV3},
     ExecutionPayloadV1,
+};
+
+use crate::payload::{
+    RedstoneBuiltPayload, RedstonePayloadAttributes, RedstonePayloadBuilderAttributes,
 };
 
 /// The types used in the optimism beacon consensus engine.
@@ -18,9 +20,9 @@ use reth_rpc_types::{
 pub struct RedstoneEngineTypes;
 
 impl EngineTypes for RedstoneEngineTypes {
-    type PayloadAttributes = OptimismPayloadAttributes;
-    type PayloadBuilderAttributes = OptimismPayloadBuilderAttributes;
-    type BuiltPayload = OptimismBuiltPayload;
+    type PayloadAttributes = RedstonePayloadAttributes;
+    type PayloadBuilderAttributes = RedstonePayloadBuilderAttributes;
+    type BuiltPayload = RedstoneBuiltPayload;
     type ExecutionPayloadV1 = ExecutionPayloadV1;
     type ExecutionPayloadV2 = ExecutionPayloadEnvelopeV2;
     type ExecutionPayloadV3 = OptimismExecutionPayloadEnvelopeV3;
