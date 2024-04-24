@@ -28,18 +28,18 @@ pub struct RedstoneBuiltPayload {
 impl BuiltPayload for RedstoneBuiltPayload {
     /// Returns the built block (sealed)
     fn block(&self) -> &SealedBlock {
-        unimplemented!()
+        &self.block
     }
 
     /// Returns the fees collected for the built block
     fn fees(&self) -> U256 {
-        unimplemented!()
+        self.fees
     }
 }
 
 impl TryFrom<RedstoneBuiltPayload> for OptimismExecutionPayloadEnvelopeV3 {
     type Error = std::convert::Infallible;
-    fn try_from(_value: RedstoneBuiltPayload) -> Result<Self, Self::Error> {
+    fn try_from(value: RedstoneBuiltPayload) -> Result<Self, Self::Error> {
         unimplemented!()
     }
 }
@@ -53,7 +53,26 @@ impl TryFrom<RedstoneBuiltPayload> for ExecutionPayloadEnvelopeV2 {
 
 impl TryFrom<RedstoneBuiltPayload> for ExecutionPayloadV1 {
     type Error = std::convert::Infallible;
-    fn try_from(_value: RedstoneBuiltPayload) -> Result<Self, Self::Error> {
-        unimplemented!()
+    fn try_from(value: RedstoneBuiltPayload) -> Result<Self, Self::Error> {
+        let block = value.block;
+        let transactions = block.raw_transactions();
+        let out = Self {
+            parent_hash: block.parent_hash,
+            fee_recipient: block.beneficiary,
+            state_root: block.state_root,
+            receipts_root: block.receipts_root,
+            logs_bloom: block.logs_bloom,
+            prev_randao: block.mix_hash,
+            block_number: block.number,
+            gas_limit: block.gas_limit,
+            gas_used: block.gas_used,
+            timestamp: block.timestamp,
+            extra_data: block.extra_data.clone(),
+            base_fee_per_gas: U256::from(block.base_fee_per_gas.unwrap_or_default()),
+            block_hash: block.hash(),
+            transactions,
+        };
+
+        Ok(out)
     }
 }
