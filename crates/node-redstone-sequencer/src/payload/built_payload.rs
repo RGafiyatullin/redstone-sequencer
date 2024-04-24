@@ -6,7 +6,7 @@ use alloy_rpc_types_engine::{
 use reth_node_api::{BuiltPayload, PayloadBuilderAttributes};
 use reth_payload_builder::PayloadId;
 use reth_primitives::{BlobTransactionSidecar, ChainSpec, SealedBlock, B256, U256};
-use reth_rpc_types::{ExecutionPayloadV1, ExecutionPayloadV2};
+use reth_rpc_types::ExecutionPayloadV1;
 
 use super::RedstonePayloadBuilderAttributes;
 
