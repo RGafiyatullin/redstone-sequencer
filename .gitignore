@@ -50,5 +50,3 @@ crates/storage/libmdbx-rs/mdbx-sys/libmdbx/cmake-build-debug
 
 # Rust bug report
 rustc-ice-*
-
-/.dev/cargo-*

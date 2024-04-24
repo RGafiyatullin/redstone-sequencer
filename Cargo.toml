@@ -63,6 +63,7 @@ revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev =
 clap = "4"
 eyre = "0.6"
 parking_lot = "0.12"
+structopt = "^0.3"
 
 # async
 async-trait = "0.1"
