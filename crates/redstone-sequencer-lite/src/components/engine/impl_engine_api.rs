@@ -1,6 +1,6 @@
 use alloy_rpc_types_engine::{
     ForkchoiceState, ForkchoiceUpdated, OptimismExecutionPayloadEnvelopeV3,
-    OptimismPayloadAttributes, PayloadStatus,
+    OptimismPayloadAttributes, PayloadStatus, PayloadStatusEnum,
 };
 use jsonrpsee::core::RpcResult;
 use reth_node_api::{ConfigureEvm, ConfigureEvmEnv};
@@ -39,7 +39,13 @@ where
         if let Some(payload_attributes) = payload_attributes {
             unimplemented!()
         } else {
-            unimplemented!()
+            Ok(ForkchoiceUpdated {
+                payload_status: PayloadStatus {
+                    status: PayloadStatusEnum::Valid,
+                    latest_valid_hash: Some(forkchoice_state.head_block_hash),
+                },
+                payload_id: None,
+            })
         }
     }
 
