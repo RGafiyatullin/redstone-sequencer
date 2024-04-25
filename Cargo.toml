@@ -7,7 +7,7 @@ members = [
 
 [workspace.lints]
 rust.missing_debug_implementations = "warn"
-rust.missing_docs = "warn"
+# rust.missing_docs = "warn"
 rust.unreachable_pub = "warn"
 rustdoc.all = "warn"
 rust.unused_must_use = "deny"
@@ -45,6 +45,7 @@ reth-transaction-pool = {git = "https://github.com/paradigmxyz/reth", rev = "d58
 alloy-rlp = "0.3.4"
 
 alloy-eips = { git = "https://github.com/alloy-rs/alloy", rev = "188c4f8" }
+alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "188c4f8" }
 alloy-rpc-types-engine = { git = "https://github.com/alloy-rs/alloy", rev = "188c4f8" }
 alloy-serde = { git = "https://github.com/alloy-rs/alloy", rev = "188c4f8" }
 
