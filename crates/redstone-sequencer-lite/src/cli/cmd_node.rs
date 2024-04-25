@@ -26,6 +26,8 @@ pub(crate) struct CmdNode {
 
     #[structopt(long, env = "DB_PATH")]
     db_path: MaybePlatformPath<DataDirPath>,
+    // #[structopt(long, env = "TICK_INTERVAL")]
+    // tick_interval: humantime::Duration,
 }
 
 impl CmdNode {
@@ -48,6 +50,7 @@ impl CmdNode {
         info!(elapsed = ?t0.elapsed(), "Blockchain provider ready.");
 
         let engine_args = engine::Args {
+            // tick_interval: self.tick_interval.into(),
             chain_spec: Arc::clone(&self.chain_spec),
             blockchain: blockchain_provider,
             evm_config,

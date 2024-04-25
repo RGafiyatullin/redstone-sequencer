@@ -1,5 +1,6 @@
 use std::future::Future;
 use std::sync::Arc;
+use std::time::Duration;
 
 use alloy_eips::BlockNumberOrTag;
 use futures::Stream;
@@ -18,6 +19,7 @@ use reth_rpc_types::AnyTransactionReceipt;
 use reth_rpc_types::RichBlock;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
+use tokio::time::MissedTickBehavior;
 use tokio_stream::wrappers::ReceiverStream;
 use tracing::error;
 use tracing::warn;
@@ -26,6 +28,7 @@ use crate::AnyError;
 
 mod impl_engine_api;
 mod impl_eth_api;
+mod preview;
 mod tx_pool;
 
 const CHANNEL_BUFFER_SIZE: usize = 64;
@@ -38,6 +41,7 @@ pub struct Api {
 
 #[derive(Debug)]
 pub struct Args<B, V> {
+    // pub tick_interval: Duration,
     pub chain_spec: Arc<ChainSpec>,
     pub blockchain: B,
     pub evm_config: V,
@@ -104,6 +108,11 @@ where
     B: Blockchain,
     V: ConfigureEvm + ConfigureEvmEnv,
 {
+    // let mut ticks = {
+    //     let mut t = tokio::time::interval(args.tick_interval);
+    //     t.set_missed_tick_behavior(MissedTickBehavior::Skip);
+    //     t
+    // };
     let mut queries = std::pin::pin!(queries);
 
     let mut state = State {
@@ -112,9 +121,26 @@ where
         tx_pool: Default::default(),
     };
 
+    // loop {
+    //     tokio::select! {
+    //         biased;
+
+    //         _ = ticks.tick() =>
+    //             state.handle_tick().await?,
+
+    //         query_opt = queries.next() =>
+    //             if let Some(query) = query_opt {
+    //                 state.handle_query(query).await?
+    //             } else {
+    //                 break
+    //             }
+    //     }
+    // }
+
     while let Some(query) = queries.next().await {
         state.handle_query(query).await?;
     }
+
     Ok(())
 }
 
@@ -122,6 +148,11 @@ impl<B, V> State<B, V>
 where
     B: Blockchain,
 {
+    // pub async fn handle_tick(&mut self) -> Result<(), AnyError> {
+    //     // tracing::error!("HANDLE TICK!");
+    //     Ok(())
+    // }
+
     pub async fn handle_query(&mut self, query: Query) -> Result<(), AnyError> {
         match query {
             Query::GetTransactionCount { address, reply_tx } => {

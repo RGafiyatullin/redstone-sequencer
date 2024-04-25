@@ -62,6 +62,7 @@ tokio-stream.workspace = true
 tracing.workspace = true
 
 dotenv = "^0.15"
+humantime = "^2"
 pretty_env_logger = "^0.5"
 
 jsonrpsee.features = ["macros", "server"]
