@@ -1,5 +1,5 @@
-mod cli;
-mod db;
+pub mod cli;
+pub mod components;
 
 pub type AnyError = Box<dyn std::error::Error + Send + Sync + 'static>;
 

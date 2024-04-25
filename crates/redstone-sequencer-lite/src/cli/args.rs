@@ -4,7 +4,7 @@ use reth_primitives::ChainSpec;
 
 use crate::AnyError;
 
-pub fn load_chain_spec(path_str: &str) -> Result<Arc<ChainSpec>, AnyError> {
+pub(crate) fn load_chain_spec(path_str: &str) -> Result<Arc<ChainSpec>, AnyError> {
     let t0 = std::time::Instant::now();
 
     let path = PathBuf::from_str(path_str)?;

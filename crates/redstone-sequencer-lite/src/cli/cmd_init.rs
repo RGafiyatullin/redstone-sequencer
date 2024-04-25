@@ -2,15 +2,15 @@ use std::{sync::Arc, time::Instant};
 
 use reth::dirs::{DataDirPath, MaybePlatformPath};
 use reth_primitives::ChainSpec;
-use reth_provider::{BlockHashReader, ProviderError, ProviderFactory};
 use tracing::info;
 
+use crate::components::db;
 use crate::AnyError;
 
 use super::Cli;
 
 #[derive(Debug, structopt::StructOpt)]
-pub struct CmdInit {
+pub(crate) struct CmdInit {
     #[structopt(long, env = "CHAIN_SPEC", parse(try_from_str = super::args::load_chain_spec))]
     chain_spec: Arc<ChainSpec>,
 
@@ -19,14 +19,14 @@ pub struct CmdInit {
 }
 
 impl CmdInit {
-    pub async fn run(&self, _cli: &Cli) -> Result<(), AnyError> {
+    pub(crate) async fn run(&self, _cli: &Cli) -> Result<(), AnyError> {
         let t0 = Instant::now();
 
         let db_path = self
             .db_path
             .unwrap_or_chain_default(self.chain_spec.chain());
-        let provider = crate::db::open(db_path, Arc::clone(&self.chain_spec))?;
-        crate::db::ensure_genesis(&provider, &self.chain_spec)?;
+        let provider_factory = db::open(db_path, Arc::clone(&self.chain_spec))?;
+        db::ensure_genesis(&provider_factory, Arc::clone(&self.chain_spec))?;
 
         info!(elapsed = ?t0.elapsed(), "Database initialized.");
 
