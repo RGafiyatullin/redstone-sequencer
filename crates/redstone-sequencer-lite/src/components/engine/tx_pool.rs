@@ -11,16 +11,16 @@ type Nonce = u64;
 type Tx = PooledTransactionsElement;
 
 #[derive(Debug, Default)]
-pub struct Nonces(HashMap<Address, Nonce>);
+pub(crate) struct Nonces(HashMap<Address, Nonce>);
 
 #[derive(Debug, Default)]
-pub struct TxPool {
+pub(crate) struct TxPool {
     scheduled: VecDeque<Tx>,
     pending: HashMap<Address, BinaryHeap<PendingTx>>,
 }
 
 impl TxPool {
-    pub fn add(&mut self, nonces: &mut Nonces, tx: Tx) -> Result<(), AnyError> {
+    pub(crate) fn add(&mut self, nonces: &mut Nonces, tx: Tx) -> Result<(), AnyError> {
         let from_address = tx.recover_signer().ok_or("couldn't recover signer")?;
         let expected_nonce = nonces
             .get_mut(&from_address)
@@ -66,31 +66,31 @@ impl TxPool {
         }
     }
 
-    pub fn scheduled_drain(&mut self) -> impl Iterator<Item = Tx> + '_ {
+    pub(crate) fn scheduled_drain(&mut self) -> impl Iterator<Item = Tx> + '_ {
         std::iter::from_fn(|| self.scheduled.pop_front())
     }
 
-    pub fn scheduled_count(&self) -> usize {
+    pub(crate) fn scheduled_count(&self) -> usize {
         self.scheduled.len()
     }
-    pub fn pending_count(&self) -> usize {
+    pub(crate) fn pending_count(&self) -> usize {
         self.pending.values().map(BinaryHeap::len).sum()
     }
 }
 
 impl Nonces {
-    pub fn get(&self, address: &Address) -> Option<u64> {
+    pub(crate) fn get(&self, address: &Address) -> Option<u64> {
         self.0.get(address).copied()
     }
-    pub fn get_mut(&mut self, address: &Address) -> Option<&mut u64> {
+    pub(crate) fn get_mut(&mut self, address: &Address) -> Option<&mut u64> {
         self.0.get_mut(address)
     }
 
-    pub fn ensure_for_address(
+    pub(crate) fn ensure_for_address<E>(
         &mut self,
         address: Address,
-        fetch_fn: impl FnOnce(Address) -> Result<u64, AnyError>,
-    ) -> Result<(), AnyError> {
+        fetch_fn: impl FnOnce(Address) -> Result<u64, E>,
+    ) -> Result<(), E> {
         use std::collections::hash_map::Entry;
         let Entry::Vacant(entry) = self.0.entry(address) else {
             return Ok(());

@@ -1,21 +1,9 @@
 use std::sync::Arc;
 
-use alloy_eips::BlockNumberOrTag;
-use reth_primitives::Address;
 use reth_primitives::ChainSpec;
-use reth_primitives::PooledTransactionsElement;
-use reth_primitives::B256;
-use reth_primitives::U256;
 use reth_provider::BlockReader;
 use reth_provider::StateProviderFactory;
-use reth_rpc::eth::error::EthApiError;
-use reth_rpc_types::AnyTransactionReceipt;
-use reth_rpc_types::RichBlock;
-use tokio::sync::mpsc;
-use tokio::sync::oneshot;
 use tokio::sync::RwLock;
-
-use crate::AnyError;
 
 mod built_payload;
 mod impl_engine_api;

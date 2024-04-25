@@ -13,6 +13,7 @@ use reth_primitives::U64;
 use reth_provider::StateProviderFactory;
 use reth_provider::TransactionVariant;
 use reth_rpc::eth::error::EthApiError;
+use reth_rpc::eth::error::RpcInvalidTransactionError;
 use reth_rpc_types::state::StateOverride;
 use reth_rpc_types::AnyTransactionReceipt;
 use reth_rpc_types::BlockTransactionsKind;
@@ -28,7 +29,6 @@ use crate::AnyError;
 
 use super::Blockchain;
 use super::Engine;
-use super::Query;
 use super::State;
 
 #[async_trait::async_trait]
@@ -39,7 +39,21 @@ where
     V: ConfigureEvm + ConfigureEvmEnv,
 {
     async fn balance(&self, address: Address, block_number: Option<BlockId>) -> RpcResult<U256> {
-        unimplemented!()
+        let r = self.0.read().await;
+        let state = if let Some(block_id) = block_number {
+            r.blockchain().state_by_block_id(block_id)
+        } else {
+            r.blockchain().latest()
+        }
+        .map_err(Into::into)
+        .map_err(EthApiError::Internal)?;
+        let balance = state
+            .account_balance(address)
+            .map_err(Into::into)
+            .map_err(EthApiError::Internal)?
+            .unwrap_or_default();
+
+        Ok(balance)
     }
 
     async fn block_by_number(
@@ -47,11 +61,48 @@ where
         number: BlockNumberOrTag,
         full: bool,
     ) -> RpcResult<Option<RichBlock>> {
-        unimplemented!()
+        let r = self.0.read().await;
+        let block_id: BlockId = number.into();
+        let Some(block_hash) = r
+            .blockchain()
+            .block_hash_for_id(block_id)
+            .map_err(Into::into)
+            .map_err(EthApiError::Internal)?
+        else {
+            return Ok(None);
+        };
+
+        self.block_by_hash(block_hash, full).await
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> RpcResult<Option<RichBlock>> {
-        unimplemented!()
+        let r = self.0.read().await;
+
+        let Some(block_with_senders) = r
+            .blockchain()
+            .block_with_senders(hash.into(), TransactionVariant::WithHash)
+            .map_err(Into::into)
+            .map_err(EthApiError::Internal)?
+        else {
+            return Ok(None);
+        };
+
+        let total_difficulty = r
+            .blockchain()
+            .header_td_by_number(block_with_senders.number)
+            .map_err(Into::into)
+            .map_err(EthApiError::Internal)?
+            .expect(&format!("could not get total-difficulty for {}", hash));
+
+        let block = reth_rpc_types_compat::block::from_block(
+            block_with_senders,
+            total_difficulty,
+            full.into(),
+            Some(hash),
+        )
+        .map_err(EthApiError::InvalidBlockData)?;
+
+        Ok(Some(block.into()))
     }
 
     async fn chain_id(&self) -> RpcResult<Option<U64>> {
@@ -77,7 +128,41 @@ where
     }
 
     async fn send_raw_transaction(&self, bytes: Bytes) -> RpcResult<B256> {
-        unimplemented!()
+        let tx = PooledTransactionsElement::decode_enveloped(&mut bytes.as_ref())
+            .map_err(|e| e.to_string())
+            .map_err(EthApiError::InvalidParams)?;
+
+        let tx_hash = *tx.hash();
+
+        let from_address = tx
+            .recover_signer()
+            .ok_or_else(|| RpcInvalidTransactionError::TxTypeNotSupported)
+            .map_err(EthApiError::InvalidTransaction)?;
+
+        let mut w = self.0.write().await;
+        let State {
+            args,
+            nonces,
+            tx_pool,
+        } = &mut *w;
+
+        nonces
+            .ensure_for_address(from_address, |address| {
+                let state = args.blockchain.latest()?;
+                let nonce = state.account_nonce(from_address)?;
+                Ok(nonce.unwrap_or_default())
+            })
+            .map_err(EthApiError::Internal)?;
+
+        tx_pool
+            .add(nonces, tx)
+            .map_err(|e| e.to_string())
+            .map_err(EthApiError::InvalidParams)?;
+
+        info!("nonces: {:#?}", nonces);
+        info!("tx_pool: {:#?}", tx_pool);
+
+        Ok(tx_hash)
     }
 
     async fn transaction_count(
@@ -85,171 +170,23 @@ where
         address: Address,
         block_number: Option<BlockId>,
     ) -> RpcResult<U256> {
-        unimplemented!()
+        let r = self.0.read().await;
+        let nonce = if let Some(nonce) = r.nonces.get(&address) {
+            nonce
+        } else {
+            r.blockchain()
+                .latest()
+                .map_err(Into::into)
+                .map_err(EthApiError::Internal)?
+                .account_nonce(address)
+                .map_err(Into::into)
+                .map_err(EthApiError::Internal)?
+                .unwrap_or_default()
+        };
+        Ok(U256::from(nonce))
     }
 
     async fn transaction_receipt(&self, hash: B256) -> RpcResult<Option<AnyTransactionReceipt>> {
-        unimplemented!()
-    }
-}
-
-impl<B, V> State<B, V>
-where
-    B: Blockchain,
-{
-    pub(super) async fn handle_get_transaction_count(
-        &self,
-        address: Address,
-        reply_tx: oneshot::Sender<u64>,
-    ) -> Result<(), AnyError> {
-        let nonce = if let Some(nonce) = self.nonces.get(&address) {
-            nonce
-        } else {
-            self.blockchain()
-                .latest()?
-                .account_nonce(address)?
-                .unwrap_or_default()
-        };
-        let _ = reply_tx
-            .send(nonce)
-            .inspect_err(|_| warn!("oneshot-tx: closed"));
-
-        Ok(())
-    }
-
-    pub(super) async fn handle_get_balance(
-        &self,
-        address: Address,
-        reply_tx: oneshot::Sender<U256>,
-    ) -> Result<(), AnyError> {
-        let balance = self
-            .blockchain()
-            .latest()?
-            .account_balance(address)?
-            .unwrap_or_default();
-        let _ = reply_tx
-            .send(balance)
-            .inspect_err(|_| warn!("oneshot-tx: closed"));
-
-        Ok(())
-    }
-
-    pub(super) async fn handle_get_block_by_number(
-        &self,
-        number_or_tag: BlockNumberOrTag,
-        full: bool,
-        reply_tx: oneshot::Sender<Result<Option<RichBlock>, EthApiError>>,
-    ) -> Result<(), AnyError> {
-        fn handle(
-            blockchain: impl Blockchain,
-            number_or_tag: BlockNumberOrTag,
-            kind: BlockTransactionsKind,
-        ) -> Result<Option<RichBlock>, EthApiError> {
-            let block_id: BlockId = number_or_tag.into();
-            let Some(block_hash) = blockchain.block_hash_for_id(block_id)? else {
-                return Ok(None);
-            };
-            let Some(block_with_senders) =
-                blockchain.block_with_senders(block_hash.into(), TransactionVariant::WithHash)?
-            else {
-                return Ok(None);
-            };
-
-            let total_difficulty = blockchain
-                .header_td_by_number(block_with_senders.number)?
-                .expect(&format!(
-                    "could not get total-difficulty for {}",
-                    block_hash
-                ));
-
-            let block = reth_rpc_types_compat::block::from_block(
-                block_with_senders,
-                total_difficulty,
-                kind,
-                Some(block_hash),
-            )?;
-
-            Ok(Some(block.into()))
-        }
-
-        let _ = reply_tx.send(handle(self.blockchain(), number_or_tag, full.into()));
-
-        Ok(())
-    }
-
-    pub(super) async fn handle_get_block_by_hash(
-        &self,
-        block_hash: B256,
-        full: bool,
-        reply_tx: oneshot::Sender<Result<Option<RichBlock>, EthApiError>>,
-    ) -> Result<(), AnyError> {
-        fn handle(
-            blockchain: impl Blockchain,
-            block_hash: B256,
-            kind: BlockTransactionsKind,
-        ) -> Result<Option<RichBlock>, EthApiError> {
-            let Some(block_with_senders) =
-                blockchain.block_with_senders(block_hash.into(), TransactionVariant::WithHash)?
-            else {
-                return Ok(None);
-            };
-
-            let total_difficulty = blockchain
-                .header_td_by_number(block_with_senders.number)?
-                .expect(&format!(
-                    "could not get total-difficulty for {}",
-                    block_hash
-                ));
-
-            let block = reth_rpc_types_compat::block::from_block(
-                block_with_senders,
-                total_difficulty,
-                kind,
-                Some(block_hash),
-            )?;
-
-            Ok(Some(block.into()))
-        }
-
-        let _ = reply_tx.send(handle(self.blockchain(), block_hash, full.into()));
-
-        Ok(())
-    }
-
-    pub(super) async fn handle_transaction_add(
-        &mut self,
-        tx: PooledTransactionsElement,
-    ) -> Result<(), AnyError> {
-        let Some(from_address) = tx.recover_signer() else {
-            warn!(tx_hash = ?tx.hash(), "could not recover signer");
-            return Ok(());
-        };
-        fn fetch_nonce<S: StateProviderFactory>(
-            blockchain: &S,
-            address: Address,
-        ) -> Result<u64, AnyError> {
-            let state = blockchain.latest()?;
-            let nonce = state.account_nonce(address)?;
-            Ok(nonce.unwrap_or_default())
-        }
-        self.nonces.ensure_for_address(from_address, |address| {
-            fetch_nonce(&self.args.blockchain, address)
-        })?;
-
-        self.tx_pool.add(&mut self.nonces, tx)?;
-
-        info!("nonces: {:#?}", self.nonces);
-        info!("tx_pool: {:#?}", self.tx_pool);
-
-        Ok(())
-    }
-
-    pub(super) async fn handle_get_transaction_receipt(
-        &self,
-        tx_hash: B256,
-        reply_tx: oneshot::Sender<Result<Option<AnyTransactionReceipt>, EthApiError>>,
-    ) -> Result<(), AnyError> {
-        let _ = reply_tx.send(Ok(None));
-        Ok(())
+        Ok(None)
     }
 }
