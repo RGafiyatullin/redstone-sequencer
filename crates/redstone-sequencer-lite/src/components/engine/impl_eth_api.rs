@@ -8,15 +8,21 @@ use reth_primitives::U256;
 use reth_primitives::U64;
 use reth_rpc_types::AnyTransactionReceipt;
 use reth_rpc_types::RichBlock;
+use tokio::sync::oneshot;
 
 use crate::api::EthApiServer;
 
 use super::Api;
+use super::Query;
 
 #[async_trait::async_trait]
 impl EthApiServer for Api {
     async fn balance(&self, address: Address, block_number: Option<BlockId>) -> RpcResult<U256> {
-        unimplemented!()
+        let (reply_tx, reply_rx) = oneshot::channel();
+        let query = Query::GetBalance { address, reply_tx };
+        self.query_tx.try_send(query).expect("ew. tx");
+        let balance = reply_rx.await.expect("ew. rx");
+        Ok(balance)
     }
 
     async fn block_by_number(
@@ -40,7 +46,11 @@ impl EthApiServer for Api {
         address: Address,
         block_number: Option<BlockId>,
     ) -> RpcResult<U256> {
-        unimplemented!()
+        let (reply_tx, reply_rx) = oneshot::channel();
+        let query = Query::GetTransactionCount { address, reply_tx };
+        self.query_tx.try_send(query).expect("ew. tx");
+        let nonce = reply_rx.await.expect("ew. rx");
+        Ok(U256::from(nonce))
     }
 
     async fn transaction_receipt(&self, hash: B256) -> RpcResult<Option<AnyTransactionReceipt>> {
