@@ -8,7 +8,6 @@ use reth_primitives::PooledTransactionsElement;
 use reth_primitives::B256;
 use reth_primitives::U256;
 use reth_primitives::U64;
-use reth_provider::ProviderError;
 use reth_provider::StateProviderFactory;
 use reth_provider::TransactionVariant;
 use reth_rpc::eth::error::EthApiError;

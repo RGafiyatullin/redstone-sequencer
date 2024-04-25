@@ -4,7 +4,6 @@ use std::{
 };
 
 use reth_primitives::{Address, PooledTransactionsElement};
-use reth_rpc_types::BlockId;
 
 use crate::AnyError;
 

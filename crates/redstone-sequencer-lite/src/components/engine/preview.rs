@@ -1,22 +1,23 @@
 use std::sync::Arc;
 
+use reth_basic_payload_builder::WithdrawalsOutcome;
 use reth_node_api::{ConfigureEvm, PayloadBuilderAttributes};
 use reth_optimism_payload_builder::error::OptimismPayloadBuilderError;
 use reth_payload_builder::error::PayloadBuilderError;
 use reth_primitives::{
-    Bytes, ChainSpec, Hardfork, Receipt, SealedBlock, TransactionSigned, TxType, U256,
+    constants::BEACON_NONCE, proofs, Block, Bytes, ChainSpec, Hardfork, Header, Receipt, Receipts,
+    SealedBlock, TransactionSigned, TxType, EMPTY_OMMER_ROOT_HASH, U256,
 };
-use reth_provider::StateProvider;
+use reth_provider::{BundleStateWithReceipts, StateProvider};
 use reth_revm::database::StateProviderDatabase;
 use revm::{
-    db::State,
-    primitives::{BlockEnv, CfgEnvWithHandlerCfg, EnvWithHandlerCfg},
+    db::{states::bundle_state::BundleRetention, State},
+    primitives::{BlockEnv, CfgEnvWithHandlerCfg, EVMError, EnvWithHandlerCfg, ResultAndState},
+    DatabaseCommit,
 };
-use tracing::warn;
+use tracing::{trace, warn};
 
-use crate::AnyError;
-
-use super::Blockchain;
+use super::{Blockchain, RedstoneBuiltPayload};
 
 pub struct Preview<A, B, E> {
     attributes: A,
@@ -24,8 +25,14 @@ pub struct Preview<A, B, E> {
     chain_spec: Arc<ChainSpec>,
     cfg: CfgEnvWithHandlerCfg,
     block_env: BlockEnv,
-    db: State<StateProviderDatabase<Box<dyn StateProvider>>>,
+    state: Box<dyn StateProvider>,
     evm_config: E,
+    cumulative_gas_used: u64,
+    total_fees: U256,
+    parent_block: Arc<SealedBlock>,
+    transactions: Vec<TransactionSigned>,
+    receipts: Vec<Receipt>,
+    extra_data: Bytes,
 }
 
 impl<A, B, E> Preview<A, B, E>
@@ -55,7 +62,7 @@ where
                 )
             })?;
         let mut db = State::builder()
-            .with_database(StateProviderDatabase::new(state))
+            .with_database(StateProviderDatabase::new(&state))
             .with_bundle_update()
             .build();
 
@@ -94,8 +101,14 @@ where
             chain_spec,
             cfg,
             block_env,
-            db,
+            state,
             evm_config,
+            cumulative_gas_used: 0,
+            total_fees: U256::ZERO,
+            parent_block,
+            transactions: Default::default(),
+            receipts: Default::default(),
+            extra_data,
         };
 
         Ok(out)
@@ -104,13 +117,14 @@ where
     pub fn process_transaction(
         &mut self,
         tx: TransactionSigned,
-    ) -> Result<Option<Receipt>, PayloadBuilderError> {
+    ) -> Result<Option<&Receipt>, PayloadBuilderError> {
         if matches!(tx.tx_type(), TxType::Eip4844) {
             return Err(OptimismPayloadBuilderError::BlobTransactionRejected)
                 .map_err(PayloadBuilderError::other);
         }
 
-        let tx = tx
+        let tx_secr = tx
+            .clone()
             .try_into_ecrecovered()
             .map_err(|_| OptimismPayloadBuilderError::TransactionEcRecoverFailed)
             .map_err(PayloadBuilderError::other)?;
@@ -119,25 +133,199 @@ where
             .chain_spec
             .is_fork_active_at_timestamp(Hardfork::Regolith, self.attributes.timestamp());
 
-        let depositor = (is_regolith && tx.is_deposit())
+        let mut db = State::builder()
+            .with_database(StateProviderDatabase::new(&self.state))
+            .with_bundle_update()
+            .build();
+
+        let depositor = (is_regolith && tx_secr.is_deposit())
             .then(|| {
-                self.db
-                    .load_cache_account(tx.signer())
+                db.load_cache_account(tx_secr.signer())
                     .map(|acc| acc.account_info().unwrap_or_default())
             })
             .transpose()
-            .map_err(|_| OptimismPayloadBuilderError::AccountLoadFailed(tx.signer()))
+            .map_err(|_| OptimismPayloadBuilderError::AccountLoadFailed(tx_secr.signer()))
             .map_err(PayloadBuilderError::other)?;
 
         let env = EnvWithHandlerCfg::new_with_cfg_env(
             self.cfg.clone(),
             self.block_env.clone(),
-            reth_primitives::revm::env::tx_env_with_recovered(&tx),
+            reth_primitives::revm::env::tx_env_with_recovered(&tx_secr),
         );
 
-        let mut evm = self.evm_config.evm_with_env(&mut self.db, env);
+        let mut evm = self.evm_config.evm_with_env(&mut db, env);
 
-        unimplemented!()
+        let Some(ResultAndState { result, state }) = evm
+            .transact()
+            .map(Some)
+            .or_else(|err| match err {
+                EVMError::Transaction(err) => {
+                    trace!(target: "payload_builder", %err, ?tx, "Error in transaction, skipping");
+                    Ok(None)
+                }
+                other => Err(other),
+            })
+            .map_err(PayloadBuilderError::EvmExecutionError)?
+        else {
+            return Ok(None);
+        };
+
+        std::mem::drop(evm);
+        db.commit(state);
+
+        let gas_used = result.gas_used();
+        self.cumulative_gas_used += gas_used;
+
+        let receipt = Receipt {
+            tx_type: tx_secr.tx_type(),
+            success: result.is_success(),
+            cumulative_gas_used: self.cumulative_gas_used,
+            logs: result.into_logs().into_iter().map(Into::into).collect(),
+            deposit_nonce: depositor.map(|account| account.nonce),
+            deposit_receipt_version: self
+                .chain_spec
+                .is_fork_active_at_timestamp(Hardfork::Canyon, self.attributes.timestamp())
+                .then_some(1),
+        };
+
+        let miner_fee = tx_secr
+            .effective_tip_per_gas(Some(self.block_env.basefee.to()))
+            .expect("fee is always valid; execution succeeded");
+        self.total_fees += U256::from(miner_fee) * U256::from(gas_used);
+
+        self.transactions.push(tx);
+        self.receipts.push(receipt);
+
+        Ok(self.receipts.last())
+    }
+
+    pub fn into_transactions(self) -> Vec<TransactionSigned> {
+        self.transactions
+    }
+
+    pub fn into_payload(self) -> Result<RedstoneBuiltPayload<A>, PayloadBuilderError> {
+        let Self {
+            state,
+            attributes,
+            chain_spec,
+            transactions,
+            receipts,
+            parent_block,
+            block_env,
+            extra_data,
+            cumulative_gas_used,
+            ..
+        } = self;
+
+        let fees = self.total_fees;
+        let sidecars = Default::default();
+        let ommers = Default::default();
+        let block_gas_limit: u64 = block_env.gas_limit.try_into().unwrap_or(u64::MAX);
+        let base_fee: u64 = block_env.basefee.to();
+
+        let mut db = State::builder()
+            .with_database(StateProviderDatabase::new(&state))
+            .with_bundle_update()
+            .build();
+
+        let WithdrawalsOutcome {
+            withdrawals_root,
+            withdrawals,
+        } = reth_basic_payload_builder::commit_withdrawals(
+            &mut db,
+            chain_spec.as_ref(),
+            attributes.timestamp(),
+            attributes.withdrawals().clone(),
+        )
+        .inspect_err(|err| {
+            warn!(
+                target: "payload_builder",
+                parent_hash=%parent_block.hash(),
+                %err,
+                "failed to commit withdrawals for empty payload"
+            )
+        })?;
+
+        db.merge_transitions(BundleRetention::PlainState);
+
+        let bundle = BundleStateWithReceipts::new(
+            db.take_bundle(),
+            Receipts::from_vec(vec![receipts.into_iter().map(Some).collect()]),
+            block_env.number.to(),
+        );
+        let receipts_root = bundle
+            .optimism_receipts_root_slow(
+                block_env.number.to(),
+                chain_spec.as_ref(),
+                attributes.timestamp(),
+            )
+            .expect("Number is in range");
+        let logs_bloom = bundle
+            .block_logs_bloom(block_env.number.to())
+            .expect("Number is in range");
+        let state_root = state.state_root(bundle.state())?;
+        let transactions_root = proofs::calculate_transaction_root(&transactions);
+
+        let is_cancun_active_now = chain_spec.is_cancun_active_at_timestamp(attributes.timestamp());
+        let is_cancun_active_at_parent =
+            chain_spec.is_cancun_active_at_timestamp(parent_block.timestamp);
+
+        let (excess_blob_gas, blob_gas_used) =
+            match (is_cancun_active_now, is_cancun_active_at_parent) {
+                (true, true) => Some((
+                    reth_primitives::eip4844::calculate_excess_blob_gas(
+                        parent_block.excess_blob_gas.unwrap_or_default(),
+                        parent_block.blob_gas_used.unwrap_or_default(),
+                    ),
+                    0,
+                )),
+                (true, false) => Some((0, 0)),
+                (false, _probably_false_too) => None,
+            }
+            .unzip();
+
+        let header = Header {
+            parent_hash: parent_block.hash(),
+            ommers_hash: EMPTY_OMMER_ROOT_HASH,
+            beneficiary: block_env.coinbase,
+            state_root,
+            transactions_root,
+            receipts_root,
+            withdrawals_root,
+            logs_bloom,
+            timestamp: attributes.timestamp(),
+            mix_hash: attributes.prev_randao(),
+            nonce: BEACON_NONCE,
+            base_fee_per_gas: Some(base_fee),
+            number: parent_block.number + 1,
+            gas_limit: block_gas_limit,
+            difficulty: U256::ZERO,
+            extra_data,
+            parent_beacon_block_root: attributes.parent_beacon_block_root(),
+            blob_gas_used,
+            excess_blob_gas,
+            gas_used: cumulative_gas_used,
+        };
+
+        let block = Block {
+            header,
+            body: transactions,
+            ommers,
+            withdrawals,
+        }
+        .seal_slow();
+
+        let payload_id = attributes.payload_id();
+
+        let payload = RedstoneBuiltPayload {
+            id: payload_id,
+            block,
+            fees,
+            sidecars,
+            chain_spec,
+            attributes,
+        };
+        Ok(payload)
     }
 }
 

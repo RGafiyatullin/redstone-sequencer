@@ -158,9 +158,8 @@ where
 
     for tx in attributes.transactions.iter().cloned().chain(transactions) {
         if matches!(tx.tx_type(), TxType::Eip4844) {
-            return Err(PayloadBuilderError::other(
-                OptimismPayloadBuilderError::BlobTransactionRejected,
-            ));
+            return Err(OptimismPayloadBuilderError::BlobTransactionRejected)
+                .map_err(PayloadBuilderError::other);
         }
 
         let tx = tx
@@ -276,7 +275,7 @@ where
 
     let block = Block {
         header,
-        body: Default::default(),
+        body: executed_txs,
         ommers: Default::default(),
         withdrawals,
     }
