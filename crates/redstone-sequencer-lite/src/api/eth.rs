@@ -17,6 +17,9 @@ pub trait EthApi {
         full: bool,
     ) -> RpcResult<Option<RichBlock>>;
 
+    #[method(name = "getBlockByHash")]
+    async fn block_by_hash(&self, hash: B256, full: bool) -> RpcResult<Option<RichBlock>>;
+
     #[method(name = "chainId")]
     async fn chain_id(&self) -> RpcResult<Option<U64>>;
 

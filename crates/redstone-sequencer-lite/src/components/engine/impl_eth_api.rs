@@ -30,7 +30,27 @@ impl EthApiServer for Api {
         number: BlockNumberOrTag,
         full: bool,
     ) -> RpcResult<Option<RichBlock>> {
-        unimplemented!()
+        let (reply_tx, reply_rx) = oneshot::channel();
+        let query = Query::GetBlockByNumber {
+            number,
+            full,
+            reply_tx,
+        };
+        self.query_tx.try_send(query).expect("ew. tx");
+        let block_opt = reply_rx.await.expect("ew. rx")?;
+        Ok(block_opt)
+    }
+
+    async fn block_by_hash(&self, hash: B256, full: bool) -> RpcResult<Option<RichBlock>> {
+        let (reply_tx, reply_rx) = oneshot::channel();
+        let query = Query::GetBlockByHash {
+            hash,
+            full,
+            reply_tx,
+        };
+        self.query_tx.try_send(query).expect("ew. tx");
+        let block_opt = reply_rx.await.expect("ew. rx")?;
+        Ok(block_opt)
     }
 
     async fn chain_id(&self) -> RpcResult<Option<U64>> {

@@ -1,14 +1,23 @@
 use std::future::Future;
 use std::sync::Arc;
 
+use alloy_eips::BlockId;
+use alloy_eips::BlockNumberOrTag;
 use futures::Stream;
 use futures::StreamExt;
 use reth_node_api::ConfigureEvm;
 use reth_node_api::ConfigureEvmEnv;
 use reth_primitives::Address;
 use reth_primitives::ChainSpec;
+use reth_primitives::B256;
 use reth_primitives::U256;
+use reth_provider::BlockReader;
+use reth_provider::ProviderError;
 use reth_provider::StateProviderFactory;
+use reth_provider::TransactionVariant;
+use reth_rpc::eth::error::EthApiError;
+use reth_rpc_types::BlockTransactionsKind;
+use reth_rpc_types::RichBlock;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tokio_stream::wrappers::ReceiverStream;
@@ -35,6 +44,9 @@ pub struct Args<B, V> {
     pub evm_config: V,
 }
 
+pub trait Blockchain: StateProviderFactory + BlockReader {}
+impl<B> Blockchain for B where B: StateProviderFactory + BlockReader {}
+
 #[derive(Debug)]
 pub struct State<B, V> {
     args: Args<B, V>,
@@ -42,7 +54,7 @@ pub struct State<B, V> {
 
 pub fn start<B, V>(args: Args<B, V>) -> (Api, impl Future<Output = Result<(), AnyError>>)
 where
-    B: StateProviderFactory,
+    B: Blockchain,
     V: ConfigureEvm + ConfigureEvmEnv,
 {
     let (query_tx, query_rx) = mpsc::channel(CHANNEL_BUFFER_SIZE);
@@ -66,12 +78,22 @@ pub enum Query {
         address: Address,
         reply_tx: oneshot::Sender<U256>,
     },
+    GetBlockByNumber {
+        number: BlockNumberOrTag,
+        full: bool,
+        reply_tx: oneshot::Sender<Result<Option<RichBlock>, EthApiError>>,
+    },
+    GetBlockByHash {
+        hash: B256,
+        full: bool,
+        reply_tx: oneshot::Sender<Result<Option<RichBlock>, EthApiError>>,
+    },
 }
 
 pub async fn run<Q, B, V>(queries: Q, args: Args<B, V>) -> Result<(), AnyError>
 where
     Q: Stream<Item = Query>,
-    B: StateProviderFactory,
+    B: Blockchain,
     V: ConfigureEvm + ConfigureEvmEnv,
 {
     let mut queries = std::pin::pin!(queries);
@@ -86,7 +108,7 @@ where
 
 impl<B, V> State<B, V>
 where
-    B: StateProviderFactory,
+    B: Blockchain,
 {
     pub async fn handle_query(&mut self, query: Query) -> Result<(), AnyError> {
         match query {
@@ -96,6 +118,19 @@ where
             Query::GetBalance { address, reply_tx } => {
                 self.handle_get_balance(address, reply_tx).await
             }
+            Query::GetBlockByNumber {
+                number,
+                full,
+                reply_tx,
+            } => {
+                self.handle_get_block_by_number(number, full, reply_tx)
+                    .await
+            }
+            Query::GetBlockByHash {
+                hash,
+                full,
+                reply_tx,
+            } => self.handle_get_block_by_hash(hash, full, reply_tx).await,
         }
     }
 
@@ -132,13 +167,94 @@ where
 
         Ok(())
     }
+
+    async fn handle_get_block_by_number(
+        &self,
+        number_or_tag: BlockNumberOrTag,
+        full: bool,
+        reply_tx: oneshot::Sender<Result<Option<RichBlock>, EthApiError>>,
+    ) -> Result<(), AnyError> {
+        fn handle(
+            blockchain: impl Blockchain,
+            number_or_tag: BlockNumberOrTag,
+            kind: BlockTransactionsKind,
+        ) -> Result<Option<RichBlock>, EthApiError> {
+            let block_id: BlockId = number_or_tag.into();
+            let Some(block_hash) = blockchain.block_hash_for_id(block_id)? else {
+                return Ok(None);
+            };
+            let Some(block_with_senders) =
+                blockchain.block_with_senders(block_hash.into(), TransactionVariant::WithHash)?
+            else {
+                return Ok(None);
+            };
+
+            let total_difficulty = blockchain
+                .header_td_by_number(block_with_senders.number)?
+                .expect(&format!(
+                    "could not get total-difficulty for {}",
+                    block_hash
+                ));
+
+            let block = reth_rpc_types_compat::block::from_block(
+                block_with_senders,
+                total_difficulty,
+                kind,
+                Some(block_hash),
+            )?;
+
+            Ok(Some(block.into()))
+        }
+
+        let _ = reply_tx.send(handle(self.blockchain(), number_or_tag, full.into()));
+
+        Ok(())
+    }
+    async fn handle_get_block_by_hash(
+        &self,
+        block_hash: B256,
+        full: bool,
+        reply_tx: oneshot::Sender<Result<Option<RichBlock>, EthApiError>>,
+    ) -> Result<(), AnyError> {
+        fn handle(
+            blockchain: impl Blockchain,
+            block_hash: B256,
+            kind: BlockTransactionsKind,
+        ) -> Result<Option<RichBlock>, EthApiError> {
+            let Some(block_with_senders) =
+                blockchain.block_with_senders(block_hash.into(), TransactionVariant::WithHash)?
+            else {
+                return Ok(None);
+            };
+
+            let total_difficulty = blockchain
+                .header_td_by_number(block_with_senders.number)?
+                .expect(&format!(
+                    "could not get total-difficulty for {}",
+                    block_hash
+                ));
+
+            let block = reth_rpc_types_compat::block::from_block(
+                block_with_senders,
+                total_difficulty,
+                kind,
+                Some(block_hash),
+            )?;
+
+            Ok(Some(block.into()))
+        }
+
+        let _ = reply_tx.send(handle(self.blockchain(), block_hash, full.into()));
+
+        Ok(())
+    }
 }
 
 impl<B, V> State<B, V>
 where
-    B: StateProviderFactory,
+    B: Blockchain,
 {
-    fn blockchain(&self) -> &dyn StateProviderFactory {
+    fn blockchain(&self) -> &B {
         &self.args.blockchain
     }
 }
