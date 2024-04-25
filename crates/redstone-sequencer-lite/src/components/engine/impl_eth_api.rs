@@ -1,5 +1,7 @@
 use alloy_serde::U64HexOrNumber;
 use jsonrpsee::core::RpcResult;
+use reth_node_api::ConfigureEvm;
+use reth_node_api::ConfigureEvmEnv;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
 use reth_primitives::BlockNumberOrTag;
@@ -24,19 +26,20 @@ use tracing::warn;
 use crate::api::EthApiServer;
 use crate::AnyError;
 
-use super::Api;
 use super::Blockchain;
+use super::Engine;
 use super::Query;
 use super::State;
 
 #[async_trait::async_trait]
-impl EthApiServer for Api {
+impl<B, V> EthApiServer for Engine<B, V>
+where
+    Engine<B, V>: 'static,
+    B: Blockchain,
+    V: ConfigureEvm + ConfigureEvmEnv,
+{
     async fn balance(&self, address: Address, block_number: Option<BlockId>) -> RpcResult<U256> {
-        let (reply_tx, reply_rx) = oneshot::channel();
-        let query = Query::GetBalance { address, reply_tx };
-        self.query_tx.try_send(query).expect("ew. tx");
-        let balance = reply_rx.await.expect("ew. rx");
-        Ok(balance)
+        unimplemented!()
     }
 
     async fn block_by_number(
@@ -44,31 +47,15 @@ impl EthApiServer for Api {
         number: BlockNumberOrTag,
         full: bool,
     ) -> RpcResult<Option<RichBlock>> {
-        let (reply_tx, reply_rx) = oneshot::channel();
-        let query = Query::GetBlockByNumber {
-            number,
-            full,
-            reply_tx,
-        };
-        self.query_tx.try_send(query).expect("ew. tx");
-        let block_opt = reply_rx.await.expect("ew. rx")?;
-        Ok(block_opt)
+        unimplemented!()
     }
 
     async fn block_by_hash(&self, hash: B256, full: bool) -> RpcResult<Option<RichBlock>> {
-        let (reply_tx, reply_rx) = oneshot::channel();
-        let query = Query::GetBlockByHash {
-            hash,
-            full,
-            reply_tx,
-        };
-        self.query_tx.try_send(query).expect("ew. tx");
-        let block_opt = reply_rx.await.expect("ew. rx")?;
-        Ok(block_opt)
+        unimplemented!()
     }
 
     async fn chain_id(&self) -> RpcResult<Option<U64>> {
-        Ok(Some(self.chain_spec.chain().id()).map(U64::from))
+        Ok(Some(self.0.read().await.args.chain_spec.chain().id()).map(U64::from))
     }
 
     async fn estimate_gas(
@@ -90,16 +77,7 @@ impl EthApiServer for Api {
     }
 
     async fn send_raw_transaction(&self, bytes: Bytes) -> RpcResult<B256> {
-        let pooled_transaction_element = PooledTransactionsElement::decode_enveloped(&mut bytes.as_ref())
-            .inspect_err(|e| tracing::warn!(target: "node::api::eth_api::send_raw_transaction", "BAD-ARG: {}", e))
-            .map_err(|_| EthApiError::FailedToDecodeSignedTransaction)?;
-        let tx_hash = *pooled_transaction_element.hash();
-        let query = Query::TransactionAdd {
-            tx: pooled_transaction_element,
-        };
-        self.query_tx.try_send(query).expect("ew. tx");
-
-        Ok(tx_hash)
+        unimplemented!()
     }
 
     async fn transaction_count(
@@ -107,19 +85,11 @@ impl EthApiServer for Api {
         address: Address,
         block_number: Option<BlockId>,
     ) -> RpcResult<U256> {
-        let (reply_tx, reply_rx) = oneshot::channel();
-        let query = Query::GetTransactionCount { address, reply_tx };
-        self.query_tx.try_send(query).expect("ew. tx");
-        let nonce = reply_rx.await.expect("ew. rx");
-        Ok(U256::from(nonce))
+        unimplemented!()
     }
 
     async fn transaction_receipt(&self, hash: B256) -> RpcResult<Option<AnyTransactionReceipt>> {
-        let (reply_tx, reply_rx) = oneshot::channel();
-        let query = Query::GetTransactionReceipt { hash, reply_tx };
-        self.query_tx.try_send(query).expect("ew. tx.");
-        let receipt_opt = reply_rx.await.expect("ew. rx")?;
-        Ok(receipt_opt)
+        unimplemented!()
     }
 }
 

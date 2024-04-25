@@ -55,18 +55,13 @@ impl CmdNode {
             blockchain: blockchain_provider,
             evm_config,
         };
-        let (engine_api, engine_running) = engine::start(engine_args);
+        let engine = engine::create(engine_args);
         let rpc_handle_a =
-            rpc::start_rpc_server_a(self.rpc_bind_addr_a, engine_api.clone(), engine_api.clone())
-                .await?;
-        let rpc_handle_b = rpc::start_server_b(self.rpc_bind_addr_b, engine_api).await?;
+            rpc::start_rpc_server_a(self.rpc_bind_addr_a, engine.clone(), engine.clone()).await?;
+        let rpc_handle_b = rpc::start_server_b(self.rpc_bind_addr_b, engine).await?;
 
-        let engine_done = engine_running.await;
-        let _ = rpc_handle_a.stop();
-        let _ = rpc_handle_b.stop();
         let () = rpc_handle_a.stopped().await;
         let () = rpc_handle_b.stopped().await;
-        let () = engine_done?;
 
         Ok(())
     }
