@@ -38,7 +38,13 @@ impl CmdNode {
             .unwrap_or_chain_default(self.chain_spec.chain());
         let provider_factory = db::open(db_path, Arc::clone(&self.chain_spec))?;
         let genesis_hash = db::ensure_genesis(&provider_factory, Arc::clone(&self.chain_spec))?;
-        info!(elapsed = ?t0.elapsed(), genesis_hash = ?genesis_hash, "Database ready.");
+
+        info!(
+            elapsed = ?t0.elapsed(),
+            ?genesis_hash,
+            state_root = ?self.chain_spec.genesis_header().state_root,
+            "Database ready."
+        );
 
         let t0 = Instant::now();
         let evm_config = evm::RedstoneEvmConfig::default();

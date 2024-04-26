@@ -11,7 +11,7 @@ use reth_primitives::{
 use reth_provider::{BundleStateWithReceipts, StateProvider};
 use reth_revm::database::StateProviderDatabase;
 use revm::{
-    db::{states::bundle_state::BundleRetention, State},
+    db::{states::bundle_state::BundleRetention, BundleState, State},
     primitives::{BlockEnv, CfgEnvWithHandlerCfg, EVMError, EnvWithHandlerCfg, ResultAndState},
     DatabaseCommit,
 };
@@ -19,13 +19,14 @@ use tracing::{trace, warn};
 
 use super::{Blockchain, RedstoneBuiltPayload};
 
-pub struct RedstonePayloadBuilder<A, B, E> {
+pub(crate) struct RedstonePayloadBuilder<A, B, E> {
     attributes: A,
     blockchain: B,
     chain_spec: Arc<ChainSpec>,
     cfg: CfgEnvWithHandlerCfg,
     block_env: BlockEnv,
-    state: Box<dyn StateProvider>,
+    state_provider: Box<dyn StateProvider>,
+    bundle_state: BundleState,
     evm_config: E,
     cumulative_gas_used: u64,
     total_fees: U256,
@@ -41,7 +42,7 @@ where
     B: Blockchain,
     E: ConfigureEvm,
 {
-    pub fn init(
+    pub(crate) fn init(
         attributes: A,
         blockchain: B,
         chain_spec: Arc<ChainSpec>,
@@ -49,7 +50,7 @@ where
         evm_config: E,
         extra_data: Bytes,
     ) -> Result<Self, PayloadBuilderError> {
-        let state = blockchain
+        let state_provider = blockchain
             .state_by_block_hash(parent_block.hash())
             .inspect_err(|err| {
                 warn!(
@@ -59,23 +60,24 @@ where
                     "failed to get state for empty payload"
                 )
             })?;
+        let state = StateProviderDatabase::new(&state_provider);
+
         let (cfg, block_env) =
             attributes.cfg_and_block_env(chain_spec.as_ref(), parent_block.header());
 
         let mut db = State::builder()
-            .with_database(StateProviderDatabase::new(&state))
+            .with_database(state)
             .with_bundle_update()
             .build();
 
-        let base_fee: u64 = block_env.basefee.to();
         let block_number: u64 = block_env.number.to();
-        let block_gas_limit: u64 = block_env.gas_limit.try_into().unwrap_or(u64::MAX);
+        // let base_fee: u64 = block_env.basefee.to();
+        // let block_gas_limit: u64 = block_env.gas_limit.try_into().unwrap_or(u64::MAX);
+        // let total_fees = U256::ZERO;
+        // let cumulative_gas_used = 0;
 
-        let mut total_fees = U256::ZERO;
-        let mut cumulative_gas_used = 0;
-
-        let is_regolith =
-            chain_spec.is_fork_active_at_timestamp(Hardfork::Regolith, attributes.timestamp());
+        // let is_regolith =
+        //     chain_spec.is_fork_active_at_timestamp(Hardfork::Regolith, attributes.timestamp());
 
         reth_basic_payload_builder::pre_block_beacon_root_contract_call(
             &mut db,
@@ -110,13 +112,17 @@ where
             )
         })?;
 
+        db.merge_transitions(BundleRetention::PlainState);
+        let bundle_state = db.take_bundle();
+
         let out = Self {
             attributes,
             blockchain,
             chain_spec,
             cfg,
             block_env,
-            state,
+            state_provider,
+            bundle_state,
             evm_config,
             cumulative_gas_used: 0,
             total_fees: U256::ZERO,
@@ -129,7 +135,7 @@ where
         Ok(out)
     }
 
-    pub fn process_transaction(
+    pub(crate) fn process_transaction(
         &mut self,
         tx: TransactionSigned,
         skip_fees: bool,
@@ -150,8 +156,9 @@ where
             .is_fork_active_at_timestamp(Hardfork::Regolith, self.attributes.timestamp());
 
         let mut db = State::builder()
-            .with_database(StateProviderDatabase::new(&self.state))
+            .with_database(StateProviderDatabase::new(&self.state_provider))
             .with_bundle_update()
+            .with_bundle_prestate(self.bundle_state.clone())
             .build();
 
         let depositor = (is_regolith && tx_secr.is_deposit())
@@ -214,16 +221,15 @@ where
         self.transactions.push(tx);
         self.receipts.push(receipt);
 
+        db.merge_transitions(BundleRetention::PlainState);
+        self.bundle_state = db.take_bundle();
+
         Ok(self.receipts.last())
     }
 
-    pub fn into_transactions(self) -> Vec<TransactionSigned> {
-        self.transactions
-    }
-
-    pub fn into_payload(self) -> Result<RedstoneBuiltPayload<A>, PayloadBuilderError> {
+    pub(crate) fn into_payload(self) -> Result<RedstoneBuiltPayload<A>, PayloadBuilderError> {
         let Self {
-            state,
+            state_provider,
             attributes,
             chain_spec,
             transactions,
@@ -232,6 +238,7 @@ where
             block_env,
             extra_data,
             cumulative_gas_used,
+            bundle_state,
             ..
         } = self;
 
@@ -242,8 +249,9 @@ where
         let base_fee: u64 = block_env.basefee.to();
 
         let mut db = State::builder()
-            .with_database(StateProviderDatabase::new(&state))
+            .with_database(StateProviderDatabase::new(&state_provider))
             .with_bundle_update()
+            .with_bundle_prestate(bundle_state)
             .build();
 
         let WithdrawalsOutcome {
@@ -265,9 +273,10 @@ where
         })?;
 
         db.merge_transitions(BundleRetention::PlainState);
+        let bundle_state = db.take_bundle();
 
         let bundle = BundleStateWithReceipts::new(
-            db.take_bundle(),
+            bundle_state,
             Receipts::from_vec(vec![receipts.into_iter().map(Some).collect()]),
             block_env.number.to(),
         );
@@ -281,7 +290,7 @@ where
         let logs_bloom = bundle
             .block_logs_bloom(block_env.number.to())
             .expect("Number is in range");
-        let state_root = state.state_root(bundle.state())?;
+        let state_root = state_provider.state_root(bundle.state())?;
         let transactions_root = proofs::calculate_transaction_root(&transactions);
 
         let is_cancun_active_now = chain_spec.is_cancun_active_at_timestamp(attributes.timestamp());

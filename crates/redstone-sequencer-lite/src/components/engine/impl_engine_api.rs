@@ -47,8 +47,6 @@ where
         versioned_hashes: Vec<B256>,
         parent_beacon_block_root: B256,
     ) -> RpcResult<PayloadStatus> {
-        // warn!(/*payload = ?payload, */versioned_hashes = ?versioned_hashes, parent_beacon_block_root = ?parent_beacon_block_root, "NOT IMPLEMENTED");
-
         let block = reth_rpc_types_compat::engine::try_into_sealed_block(
             payload.into(),
             Some(parent_beacon_block_root),
@@ -56,7 +54,11 @@ where
         .map_err(|e| e.to_string())
         .map_err(EthApiError::InvalidParams)?;
 
-        info!(this = ?block.hash(), parent = ?block.parent_hash, state_root = ?block.state_root, "new-payload");
+        let this_hash = *block.hash();
+        let parent_hash = block.parent_hash;
+        let state_root = block.state_root;
+
+        info!(?this_hash, ?parent_hash, ?state_root, "new-payload");
 
         let r = self.0.read().await;
 
@@ -66,7 +68,14 @@ where
             .insert_block_without_senders(block, BlockValidationKind::Exhaustive)
             .map_err(|e| e.to_string())
             .map_err(EthApiError::InvalidParams)?;
-        info!("insert-payload-ok: {:?}", insert_payload_ok);
+
+        info!(
+            ?this_hash,
+            ?parent_hash,
+            ?state_root,
+            ?insert_payload_ok,
+            "new-payload [INSERT-OK]"
+        );
 
         Ok(PayloadStatus::new(
             alloy_rpc_types_engine::PayloadStatusEnum::Valid,

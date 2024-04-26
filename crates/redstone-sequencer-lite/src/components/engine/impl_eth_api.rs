@@ -18,7 +18,7 @@ use reth_rpc_types::AnyTransactionReceipt;
 use reth_rpc_types::FeeHistory;
 use reth_rpc_types::RichBlock;
 use reth_rpc_types::TransactionRequest;
-use tracing::info;
+use tracing::debug;
 use tracing::warn;
 
 use crate::api::EthApiServer;
@@ -156,18 +156,25 @@ where
             .map_err(|e| e.to_string())
             .map_err(EthApiError::InvalidParams)?;
 
+        debug!(
+            ?tx_hash,
+            scheduled_count = tx_pool.scheduled_count(),
+            pending_count = tx_pool.pending_count(),
+            "Added transaction into pool."
+        );
+
         if payloads.len() == 1 {
             let (payload_id, builder) = payloads
                 .iter_mut()
                 .next()
                 .expect("len checked right before");
-            info!(?payload_id, "Selected payload builder");
+            debug!(?payload_id, "Selected payload builder");
             for tx in tx_pool.scheduled_drain() {
                 let tx_hash = *tx.hash();
                 if let Err(err) = builder.process_transaction(tx.into_transaction(), false) {
                     warn!(?payload_id, ?tx_hash, %err, "error processing transaction: ")
                 } else {
-                    info!(?payload_id, ?tx_hash, "transaction processed");
+                    debug!(?payload_id, ?tx_hash, "transaction processed");
                 }
             }
         } else {
