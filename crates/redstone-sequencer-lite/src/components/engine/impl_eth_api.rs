@@ -19,6 +19,7 @@ use reth_rpc_types::FeeHistory;
 use reth_rpc_types::RichBlock;
 use reth_rpc_types::TransactionRequest;
 use tracing::info;
+use tracing::warn;
 
 use crate::api::EthApiServer;
 
@@ -139,7 +140,7 @@ where
             args,
             nonces,
             tx_pool,
-            ..
+            payloads,
         } = &mut *w;
 
         nonces
@@ -155,8 +156,26 @@ where
             .map_err(|e| e.to_string())
             .map_err(EthApiError::InvalidParams)?;
 
-        info!("nonces: {:#?}", nonces);
-        info!("tx_pool: {:#?}", tx_pool);
+        if payloads.len() == 1 {
+            let (payload_id, builder) = payloads
+                .iter_mut()
+                .next()
+                .expect("len checked right before");
+            info!(?payload_id, "Selected payload builder");
+            for tx in tx_pool.scheduled_drain() {
+                let tx_hash = *tx.hash();
+                if let Err(err) = builder.process_transaction(tx.into_transaction(), false) {
+                    warn!(?payload_id, ?tx_hash, %err, "error processing transaction: ")
+                } else {
+                    info!(?payload_id, ?tx_hash, "transaction processed");
+                }
+            }
+        } else {
+            warn!(
+                payloads_len = payloads.len(),
+                "Could not select a payload builder"
+            )
+        }
 
         Ok(tx_hash)
     }
