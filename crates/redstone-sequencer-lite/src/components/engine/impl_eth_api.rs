@@ -1,12 +1,20 @@
+use std::collections::HashMap;
+
 use alloy_serde::U64HexOrNumber;
 use jsonrpsee::core::RpcResult;
 use reth_node_api::ConfigureEvm;
 use reth_node_api::ConfigureEvmEnv;
+use reth_node_api::PayloadBuilderAttributes;
+use reth_payload_builder::PayloadId;
 use reth_primitives::Address;
 use reth_primitives::BlockId;
 use reth_primitives::BlockNumberOrTag;
 use reth_primitives::Bytes;
 use reth_primitives::PooledTransactionsElement;
+use reth_primitives::Receipt;
+use reth_primitives::TransactionKind;
+use reth_primitives::TransactionMeta;
+use reth_primitives::TransactionSigned;
 use reth_primitives::B256;
 use reth_primitives::U256;
 use reth_primitives::U64;
@@ -23,6 +31,7 @@ use tracing::warn;
 
 use crate::api::EthApiServer;
 
+use super::payload_builder::RedstonePayloadBuilder;
 use super::Blockchain;
 use super::Engine;
 use super::State;
@@ -210,6 +219,175 @@ where
     }
 
     async fn transaction_receipt(&self, hash: B256) -> RpcResult<Option<AnyTransactionReceipt>> {
-        Ok(None)
+        let r = self.0.read().await;
+
+        fn from_db(
+            blockchain: &impl Blockchain,
+            hash: B256,
+        ) -> Result<Option<(TransactionSigned, TransactionMeta, Receipt)>, EthApiError> {
+            let opt = blockchain
+                .transaction_by_hash_with_meta(hash)?
+                .zip(blockchain.receipt_by_hash(hash)?)
+                .map(|((tx, meta), receipt)| (tx, meta, receipt));
+            Ok(opt)
+        }
+
+        fn from_builder<A, B, V>(
+            builders: &HashMap<PayloadId, RedstonePayloadBuilder<A, B, V>>,
+            hash: B256,
+        ) -> Option<(TransactionSigned, Receipt)>
+        where
+            A: PayloadBuilderAttributes,
+            B: Blockchain,
+            V: ConfigureEvm + ConfigureEvmEnv,
+        {
+            builders
+                .values()
+                .map(|builder| builder.transactions_with_receipts())
+                .flatten()
+                .find(|(tx, _)| tx.hash() == hash)
+                .map(|(tx, receipt)| (tx.to_owned(), receipt.to_owned()))
+        }
+
+        fn make_any_transaction_receipt(
+            hash: B256,
+            transaction: TransactionSigned,
+            meta: TransactionMeta,
+            receipt: Receipt,
+        ) -> Result<AnyTransactionReceipt, EthApiError> {
+            let all_receipts: &[Receipt] = &[];
+
+            // Note: we assume this transaction is valid, because it's mined (or part of pending block) and
+            // we don't need to check for pre EIP-2
+            let from = transaction
+                .recover_signer_unchecked()
+                .ok_or(EthApiError::InvalidTransactionSignature)?;
+            // get the previous transaction cumulative gas used
+            let gas_used = if meta.index == 0 {
+                receipt.cumulative_gas_used
+            } else {
+                let prev_tx_idx = (meta.index - 1) as usize;
+                all_receipts
+                    .get(prev_tx_idx)
+                    .map(|prev_receipt| {
+                        receipt.cumulative_gas_used - prev_receipt.cumulative_gas_used
+                    })
+                    .unwrap_or_default()
+            };
+            let blob_gas_used = transaction.transaction.blob_gas_used();
+            // Blob gas price should only be present if the transaction is a blob transaction
+            let blob_gas_price = blob_gas_used.and_then(|_| {
+                meta.excess_blob_gas
+                    .map(revm::primitives::calc_blob_gasprice)
+            });
+            let logs_bloom = receipt.bloom_slow();
+
+            // get number of logs in the block
+            let mut num_logs = 0;
+            for prev_receipt in all_receipts.iter().take(meta.index as usize) {
+                num_logs += prev_receipt.logs.len();
+            }
+
+            let mut logs = Vec::with_capacity(receipt.logs.len());
+            for (tx_log_idx, log) in receipt.logs.into_iter().enumerate() {
+                let rpclog = alloy_rpc_types::Log {
+                    inner: log,
+                    block_hash: Some(meta.block_hash),
+                    block_number: Some(meta.block_number),
+                    block_timestamp: Some(meta.timestamp),
+                    transaction_hash: Some(meta.tx_hash),
+                    transaction_index: Some(meta.index),
+                    log_index: Some((num_logs + tx_log_idx) as u64),
+                    removed: false,
+                };
+                logs.push(rpclog);
+            }
+
+            let rpc_receipt = reth_rpc_types::Receipt {
+                status: receipt.success,
+                cumulative_gas_used: receipt.cumulative_gas_used as u128,
+                logs,
+            };
+
+            #[allow(clippy::needless_update)]
+            let res_receipt = alloy_rpc_types::TransactionReceipt {
+                inner: alloy_rpc_types::AnyReceiptEnvelope {
+                    inner: alloy_rpc_types::ReceiptWithBloom {
+                        receipt: rpc_receipt,
+                        logs_bloom,
+                    },
+                    r#type: transaction.transaction.tx_type().into(),
+                },
+                transaction_hash: meta.tx_hash,
+                transaction_index: Some(meta.index),
+                block_hash: Some(meta.block_hash),
+                block_number: Some(meta.block_number),
+                from,
+                to: None,
+                gas_used: gas_used as u128,
+                contract_address: None,
+                effective_gas_price: transaction.effective_gas_price(meta.base_fee),
+                // TODO pre-byzantium receipts have a post-transaction state root
+                state_root: None,
+                // EIP-4844 fields
+                blob_gas_price,
+                blob_gas_used: blob_gas_used.map(u128::from),
+            };
+            let mut res_receipt = alloy_rpc_types::WithOtherFields::new(res_receipt);
+
+            // {
+            //     let mut op_fields = OptimismTransactionReceiptFields::default();
+
+            //     if transaction.is_deposit() {
+            //         op_fields.deposit_nonce = receipt.deposit_nonce.map(reth_primitives::U64::from);
+            //         op_fields.deposit_receipt_version = receipt
+            //             .deposit_receipt_version
+            //             .map(reth_primitives::U64::from);
+            //     } else if let Some(l1_block_info) = optimism_tx_meta.l1_block_info {
+            //         op_fields.l1_fee = optimism_tx_meta.l1_fee;
+            //         op_fields.l1_gas_used = optimism_tx_meta.l1_data_gas.map(|dg| {
+            //             dg + l1_block_info
+            //                 .l1_fee_overhead
+            //                 .unwrap_or_default()
+            //                 .saturating_to::<u128>()
+            //         });
+            //         op_fields.l1_fee_scalar =
+            //             Some(f64::from(l1_block_info.l1_base_fee_scalar) / 1_000_000.0);
+            //         op_fields.l1_gas_price = Some(l1_block_info.l1_base_fee.saturating_to());
+            //     }
+
+            //     res_receipt.other = op_fields.into();
+            // }
+
+            match transaction.transaction.kind() {
+                TransactionKind::Create => {
+                    res_receipt.contract_address =
+                        Some(from.create(transaction.transaction.nonce()));
+                }
+                TransactionKind::Call(addr) => {
+                    res_receipt.to = Some(*addr);
+                }
+            }
+
+            res_receipt.transaction_hash = hash;
+            Ok(res_receipt)
+        }
+
+        if let Some((tx, meta, receipt)) = from_db(r.blockchain(), hash)? {
+            Some(make_any_transaction_receipt(hash, tx, meta, receipt))
+                .transpose()
+                .map_err(Into::into)
+        } else if let Some((tx, receipt)) = from_builder(&r.payloads, hash) {
+            Some(make_any_transaction_receipt(
+                hash,
+                tx,
+                Default::default(),
+                receipt,
+            ))
+            .transpose()
+            .map_err(Into::into)
+        } else {
+            Ok(None)
+        }
     }
 }

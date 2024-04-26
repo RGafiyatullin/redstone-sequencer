@@ -15,7 +15,7 @@ use revm::{
     primitives::{BlockEnv, CfgEnvWithHandlerCfg, EVMError, EnvWithHandlerCfg, ResultAndState},
     DatabaseCommit,
 };
-use tracing::{info, trace, warn};
+use tracing::{info, warn};
 
 use super::{Blockchain, RedstoneBuiltPayload};
 
@@ -42,6 +42,12 @@ where
     B: Blockchain,
     E: ConfigureEvm,
 {
+    pub(crate) fn transactions_with_receipts(
+        &self,
+    ) -> impl Iterator<Item = (&'_ TransactionSigned, &'_ Receipt)> + '_ {
+        self.transactions.iter().zip(self.receipts.iter())
+    }
+
     pub(crate) fn init(
         attributes: A,
         blockchain: B,
