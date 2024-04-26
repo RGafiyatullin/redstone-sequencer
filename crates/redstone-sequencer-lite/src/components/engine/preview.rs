@@ -73,8 +73,6 @@ where
 
         let mut total_fees = U256::ZERO;
         let mut cumulative_gas_used = 0;
-        // let mut executed_txs = vec![];
-        // let mut receipts = vec![];
 
         let is_regolith =
             chain_spec.is_fork_active_at_timestamp(Hardfork::Regolith, attributes.timestamp());
@@ -93,6 +91,22 @@ where
                 parent_hash=%parent_block.hash(),
                 %err,
                 "failed to apply beacon root contract call for empty payload"
+            )
+        })?;
+
+        reth_revm::optimism::ensure_create2_deployer(
+            Arc::clone(&chain_spec),
+            attributes.timestamp(),
+            &mut db,
+        )
+        .map_err(|_| OptimismPayloadBuilderError::ForceCreate2DeployerFail)
+        .map_err(PayloadBuilderError::other)
+        .inspect_err(|err| {
+            warn!(
+                target: "payload_builder",
+                parent_hash=%parent_block.hash(),
+                %err,
+                "failed to force-deploy create2deployer"
             )
         })?;
 
