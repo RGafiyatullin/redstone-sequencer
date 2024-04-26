@@ -54,6 +54,7 @@ impl CmdNode {
             chain_spec: Arc::clone(&self.chain_spec),
             blockchain: blockchain_provider,
             evm_config,
+            payload_extradata: Default::default(),
         };
         let engine = engine::create(engine_args);
         let rpc_handle_a =

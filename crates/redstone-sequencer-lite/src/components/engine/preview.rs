@@ -46,8 +46,6 @@ where
         blockchain: B,
         chain_spec: Arc<ChainSpec>,
         parent_block: Arc<SealedBlock>,
-        cfg: CfgEnvWithHandlerCfg,
-        block_env: BlockEnv,
         evm_config: E,
         extra_data: Bytes,
     ) -> Result<Self, PayloadBuilderError> {
@@ -61,6 +59,9 @@ where
                     "failed to get state for empty payload"
                 )
             })?;
+        let (cfg, block_env) =
+            attributes.cfg_and_block_env(chain_spec.as_ref(), parent_block.header());
+
         let mut db = State::builder()
             .with_database(StateProviderDatabase::new(&state))
             .with_bundle_update()
