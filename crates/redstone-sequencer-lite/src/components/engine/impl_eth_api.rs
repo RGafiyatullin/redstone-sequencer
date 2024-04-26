@@ -10,22 +10,17 @@ use reth_primitives::PooledTransactionsElement;
 use reth_primitives::B256;
 use reth_primitives::U256;
 use reth_primitives::U64;
-use reth_provider::StateProviderFactory;
 use reth_provider::TransactionVariant;
 use reth_rpc::eth::error::EthApiError;
 use reth_rpc::eth::error::RpcInvalidTransactionError;
 use reth_rpc_types::state::StateOverride;
 use reth_rpc_types::AnyTransactionReceipt;
-use reth_rpc_types::BlockTransactionsKind;
 use reth_rpc_types::FeeHistory;
 use reth_rpc_types::RichBlock;
 use reth_rpc_types::TransactionRequest;
-use tokio::sync::oneshot;
 use tracing::info;
-use tracing::warn;
 
 use crate::api::EthApiServer;
-use crate::AnyError;
 
 use super::Blockchain;
 use super::Engine;

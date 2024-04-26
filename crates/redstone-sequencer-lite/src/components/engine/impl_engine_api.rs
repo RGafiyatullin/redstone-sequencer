@@ -4,19 +4,18 @@ use alloy_rpc_types_engine::{
     ForkchoiceState, ForkchoiceUpdated, OptimismExecutionPayloadEnvelopeV3,
     OptimismPayloadAttributes, PayloadStatus, PayloadStatusEnum,
 };
-use futures::TryFutureExt;
 use jsonrpsee::core::RpcResult;
 use reth_interfaces::{blockchain_tree::CanonicalOutcome, provider::ProviderError};
-use reth_node_api::{ConfigureEvm, ConfigureEvmEnv, PayloadAttributes, PayloadBuilderAttributes};
+use reth_node_api::{ConfigureEvm, ConfigureEvmEnv, PayloadBuilderAttributes};
 use reth_optimism_payload_builder::OptimismPayloadBuilderAttributes;
 use reth_payload_builder::PayloadId;
-use reth_primitives::{TransactionSigned, B256};
+use reth_primitives::{TransactionSigned, B256, U256};
 use reth_provider::BlockSource;
-use reth_rpc::eth::error::{EthApiError, RpcInvalidTransactionError};
-use reth_rpc_types::ExecutionPayloadV3;
-use tracing::debug;
+use reth_rpc::eth::error::EthApiError;
+use reth_rpc_types::{ExecutionPayloadV1, ExecutionPayloadV2, ExecutionPayloadV3};
+use tracing::{debug, warn};
 
-use crate::{api::EngineApiV3Server, components::evm::RedstoneEvmConfig};
+use crate::{api::EngineApiV3Server, components::engine::RedstoneBuiltPayload};
 
 use super::{preview::Preview, Blockchain, Engine};
 
@@ -45,6 +44,7 @@ where
         versioned_hashes: Vec<B256>,
         parent_beacon_block_root: B256,
     ) -> RpcResult<PayloadStatus> {
+        warn!(payload = ?payload, versioned_hashes = ?versioned_hashes, parent_beacon_block_root = ?parent_beacon_block_root, "NOT IMPLEMENTED");
         Ok(PayloadStatus::new(
             alloy_rpc_types_engine::PayloadStatusEnum::Valid,
             Default::default(),
@@ -55,7 +55,9 @@ where
         &self,
         payload_id: PayloadId,
     ) -> RpcResult<OptimismExecutionPayloadEnvelopeV3> {
-        unimplemented!()
+        self.process_get_payload(payload_id)
+            .await
+            .map_err(Into::into)
     }
 }
 
@@ -65,6 +67,89 @@ where
     B: Blockchain,
     V: ConfigureEvm + ConfigureEvmEnv,
 {
+    async fn process_get_payload(
+        &self,
+        payload_id: PayloadId,
+    ) -> Result<OptimismExecutionPayloadEnvelopeV3, EthApiError> {
+        let Some(builder) = self.0.write().await.payloads.remove(&payload_id) else {
+            return Err(EthApiError::InvalidParams(format!(
+                "Unknown payload-id: {}",
+                payload_id
+            )));
+        };
+        let RedstoneBuiltPayload {
+            block,
+            fees,
+            sidecars,
+            chain_spec,
+            attributes,
+            ..
+        } = builder
+            .into_payload()
+            .map_err(|e| e.to_string())
+            .map_err(EthApiError::InvalidParams)?;
+
+        let parent_beacon_block_root = chain_spec
+            .is_cancun_active_at_timestamp(attributes.timestamp())
+            .then(|| attributes.parent_beacon_block_root())
+            .flatten()
+            .unwrap_or(B256::ZERO);
+
+        let transactions = block.raw_transactions();
+        let withdrawals: Vec<_> = block
+            .withdrawals
+            .clone()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|w| reth_rpc_types::Withdrawal {
+                index: w.index,
+                validator_index: w.validator_index,
+                address: w.address,
+                amount: w.amount,
+            })
+            .collect();
+
+        let payload_inner = ExecutionPayloadV1 {
+            parent_hash: block.parent_hash,
+            fee_recipient: block.beneficiary,
+            state_root: block.state_root,
+            receipts_root: block.receipts_root,
+            logs_bloom: block.logs_bloom,
+            prev_randao: block.mix_hash,
+            block_number: block.number,
+            gas_limit: block.gas_limit,
+            gas_used: block.gas_used,
+            timestamp: block.timestamp,
+            extra_data: block.extra_data.clone(),
+            base_fee_per_gas: U256::from(block.base_fee_per_gas.unwrap_or_default()),
+            block_hash: block.hash(),
+            transactions,
+        };
+        let payload_inner = ExecutionPayloadV2 {
+            payload_inner,
+            withdrawals,
+        };
+        let execution_payload = ExecutionPayloadV3 {
+            payload_inner,
+            blob_gas_used: block.blob_gas_used(),
+            excess_blob_gas: block.excess_blob_gas.unwrap_or_default(),
+        };
+
+        let envelope = OptimismExecutionPayloadEnvelopeV3 {
+            execution_payload,
+            block_value: fees,
+            should_override_builder: false,
+            blobs_bundle: sidecars
+                .into_iter()
+                .map(Into::into)
+                .collect::<Vec<_>>()
+                .into(),
+            parent_beacon_block_root,
+        };
+
+        Ok(envelope)
+    }
+
     async fn process_forkchoice_updated(
         &self,
         state: ForkchoiceState,
@@ -83,7 +168,7 @@ where
             let make_canonical_outcome = match r.blockchain().make_canonical(state.head_block_hash)
             {
                 Ok(outcome) => outcome,
-                Err(err) => return Err(EthApiError::Unsupported("make_canonical failed")),
+                Err(_err) => return Err(EthApiError::Unsupported("make_canonical failed")),
             };
 
             match make_canonical_outcome {
@@ -131,6 +216,13 @@ where
         state: ForkchoiceState,
         attrs: PayloadAttrs,
     ) -> Result<PayloadId, EthApiError> {
+        let mut txs = vec![];
+        for tx_encoded in attrs.transactions.as_ref().into_iter().flatten() {
+            let tx = TransactionSigned::decode_enveloped(&mut &tx_encoded[..])
+                .map_err(|e| e.to_string())
+                .map_err(EthApiError::InvalidParams)?;
+            txs.push(tx);
+        }
         let (payload_id, builder) = {
             let r = self.0.read().await;
 
@@ -150,7 +242,7 @@ where
 
             let payload_id = builder_attributes.payload_id();
 
-            let builder = Preview::<OptimismPayloadBuilderAttributes, B, V>::init(
+            let mut builder = Preview::<OptimismPayloadBuilderAttributes, B, V>::init(
                 builder_attributes,
                 r.blockchain().clone(),
                 Arc::clone(&r.args.chain_spec),
@@ -160,6 +252,13 @@ where
             )
             .map_err(|e| e.to_string())
             .map_err(EthApiError::InvalidParams)?;
+
+            for tx in txs {
+                builder
+                    .process_transaction(tx, /* skip_fees: */ true)
+                    .map_err(|e| e.to_string())
+                    .map_err(EthApiError::InvalidParams)?;
+            }
 
             (payload_id, builder)
         };

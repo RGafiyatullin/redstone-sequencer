@@ -118,6 +118,7 @@ where
     pub fn process_transaction(
         &mut self,
         tx: TransactionSigned,
+        skip_fees: bool,
     ) -> Result<Option<&Receipt>, PayloadBuilderError> {
         if matches!(tx.tx_type(), TxType::Eip4844) {
             return Err(OptimismPayloadBuilderError::BlobTransactionRejected)
@@ -189,10 +190,12 @@ where
                 .then_some(1),
         };
 
-        let miner_fee = tx_secr
-            .effective_tip_per_gas(Some(self.block_env.basefee.to()))
-            .expect("fee is always valid; execution succeeded");
-        self.total_fees += U256::from(miner_fee) * U256::from(gas_used);
+        if !skip_fees {
+            let miner_fee = tx_secr
+                .effective_tip_per_gas(Some(self.block_env.basefee.to()))
+                .expect("fee is always valid; execution succeeded");
+            self.total_fees += U256::from(miner_fee) * U256::from(gas_used);
+        }
 
         self.transactions.push(tx);
         self.receipts.push(receipt);
