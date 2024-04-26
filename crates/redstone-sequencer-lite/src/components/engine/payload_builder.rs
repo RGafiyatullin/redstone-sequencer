@@ -15,7 +15,7 @@ use revm::{
     primitives::{BlockEnv, CfgEnvWithHandlerCfg, EVMError, EnvWithHandlerCfg, ResultAndState},
     DatabaseCommit,
 };
-use tracing::{trace, warn};
+use tracing::{info, trace, warn};
 
 use super::{Blockchain, RedstoneBuiltPayload};
 
@@ -64,6 +64,8 @@ where
 
         let (cfg, block_env) =
             attributes.cfg_and_block_env(chain_spec.as_ref(), parent_block.header());
+
+        info!(?cfg, ?block_env, "Create cfg and block-env: ");
 
         let mut db = State::builder()
             .with_database(state)
@@ -183,7 +185,7 @@ where
             .map(Some)
             .or_else(|err| match err {
                 EVMError::Transaction(err) => {
-                    trace!(target: "payload_builder", %err, ?tx, "Error in transaction, skipping");
+                    warn!(target: "payload_builder", %err, ?tx, "Error in transaction, skipping");
                     Ok(None)
                 }
                 other => Err(other),

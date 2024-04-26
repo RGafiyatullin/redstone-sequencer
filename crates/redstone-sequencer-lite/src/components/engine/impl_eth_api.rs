@@ -171,10 +171,11 @@ where
             debug!(?payload_id, "Selected payload builder");
             for tx in tx_pool.scheduled_drain() {
                 let tx_hash = *tx.hash();
-                if let Err(err) = builder.process_transaction(tx.into_transaction(), false) {
-                    warn!(?payload_id, ?tx_hash, %err, "error processing transaction: ")
-                } else {
-                    debug!(?payload_id, ?tx_hash, "transaction processed");
+                match builder.process_transaction(tx.into_transaction(), false) {
+                    Ok(receipt) => debug!(?payload_id, ?tx_hash, ?receipt, "transaction processed"),
+                    Err(err) => {
+                        warn!(?payload_id, ?tx_hash, %err, "error processing transaction: ")
+                    }
                 }
             }
         } else {
