@@ -19,7 +19,7 @@ use tracing::{trace, warn};
 
 use super::{Blockchain, RedstoneBuiltPayload};
 
-pub struct Preview<A, B, E> {
+pub struct RedstonePayloadBuilder<A, B, E> {
     attributes: A,
     blockchain: B,
     chain_spec: Arc<ChainSpec>,
@@ -35,7 +35,7 @@ pub struct Preview<A, B, E> {
     extra_data: Bytes,
 }
 
-impl<A, B, E> Preview<A, B, E>
+impl<A, B, E> RedstonePayloadBuilder<A, B, E>
 where
     A: PayloadBuilderAttributes,
     B: Blockchain,
@@ -333,7 +333,7 @@ where
     }
 }
 
-impl<A, B, E> std::fmt::Debug for Preview<A, B, E> {
+impl<A, B, E> std::fmt::Debug for RedstonePayloadBuilder<A, B, E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Preview").finish()
     }

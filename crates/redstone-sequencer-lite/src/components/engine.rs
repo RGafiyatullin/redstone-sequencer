@@ -22,7 +22,7 @@ mod tx_pool;
 
 pub use built_payload::RedstoneBuiltPayload;
 
-use self::preview::Preview;
+use self::preview::RedstonePayloadBuilder;
 
 #[derive(Debug)]
 pub struct Args<B, V> {
@@ -63,7 +63,7 @@ struct State<B, V> {
     args: Args<B, V>,
     nonces: tx_pool::Nonces,
     tx_pool: tx_pool::TxPool,
-    payloads: HashMap<PayloadId, Preview<OptimismPayloadBuilderAttributes, B, V>>,
+    payloads: HashMap<PayloadId, RedstonePayloadBuilder<OptimismPayloadBuilderAttributes, B, V>>,
 }
 
 pub fn create<B, V>(args: Args<B, V>) -> Engine<B, V> {

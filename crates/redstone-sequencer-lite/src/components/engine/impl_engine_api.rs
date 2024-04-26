@@ -5,7 +5,10 @@ use alloy_rpc_types_engine::{
     OptimismPayloadAttributes, PayloadStatus, PayloadStatusEnum,
 };
 use jsonrpsee::core::RpcResult;
-use reth_interfaces::{blockchain_tree::CanonicalOutcome, provider::ProviderError};
+use reth_interfaces::{
+    blockchain_tree::{BlockValidationKind, CanonicalOutcome},
+    provider::ProviderError,
+};
 use reth_node_api::{ConfigureEvm, ConfigureEvmEnv, PayloadBuilderAttributes};
 use reth_optimism_payload_builder::OptimismPayloadBuilderAttributes;
 use reth_payload_builder::PayloadId;
@@ -13,11 +16,11 @@ use reth_primitives::{TransactionSigned, B256, U256};
 use reth_provider::BlockSource;
 use reth_rpc::eth::error::EthApiError;
 use reth_rpc_types::{ExecutionPayloadV1, ExecutionPayloadV2, ExecutionPayloadV3};
-use tracing::{debug, warn};
+use tracing::{debug, info};
 
 use crate::{api::EngineApiV3Server, components::engine::RedstoneBuiltPayload};
 
-use super::{preview::Preview, Blockchain, Engine};
+use super::{preview::RedstonePayloadBuilder, Blockchain, Engine};
 
 type PayloadAttrs = OptimismPayloadAttributes;
 
@@ -44,10 +47,30 @@ where
         versioned_hashes: Vec<B256>,
         parent_beacon_block_root: B256,
     ) -> RpcResult<PayloadStatus> {
-        warn!(payload = ?payload, versioned_hashes = ?versioned_hashes, parent_beacon_block_root = ?parent_beacon_block_root, "NOT IMPLEMENTED");
+        // warn!(/*payload = ?payload, */versioned_hashes = ?versioned_hashes, parent_beacon_block_root = ?parent_beacon_block_root, "NOT IMPLEMENTED");
+
+        let block = reth_rpc_types_compat::engine::try_into_sealed_block(
+            payload.into(),
+            Some(parent_beacon_block_root),
+        )
+        .map_err(|e| e.to_string())
+        .map_err(EthApiError::InvalidParams)?;
+
+        info!(this = ?block.hash(), parent = ?block.parent_hash, state_root = ?block.state_root, "new-payload");
+
+        let r = self.0.read().await;
+
+        let block_hash = block.hash();
+        let insert_payload_ok = r
+            .blockchain()
+            .insert_block_without_senders(block, BlockValidationKind::Exhaustive)
+            .map_err(|e| e.to_string())
+            .map_err(EthApiError::InvalidParams)?;
+        info!("insert-payload-ok: {:?}", insert_payload_ok);
+
         Ok(PayloadStatus::new(
             alloy_rpc_types_engine::PayloadStatusEnum::Valid,
-            Default::default(),
+            Some(block_hash),
         ))
     }
 
@@ -57,6 +80,24 @@ where
     ) -> RpcResult<OptimismExecutionPayloadEnvelopeV3> {
         self.process_get_payload(payload_id)
             .await
+            .inspect(|envelope| {
+                let parent_hash = envelope
+                    .execution_payload
+                    .payload_inner
+                    .payload_inner
+                    .parent_hash;
+                let block_hash = envelope
+                    .execution_payload
+                    .payload_inner
+                    .payload_inner
+                    .block_hash;
+                let state_root = envelope
+                .execution_payload
+                .payload_inner
+                .payload_inner
+                .state_root;
+                info!(this = ?block_hash, parent = ?parent_hash, state_root = ?state_root, "get-payload.OK: ");
+            })
             .map_err(Into::into)
     }
 }
@@ -242,16 +283,17 @@ where
 
             let payload_id = builder_attributes.payload_id();
 
-            let mut builder = Preview::<OptimismPayloadBuilderAttributes, B, V>::init(
-                builder_attributes,
-                r.blockchain().clone(),
-                Arc::clone(&r.args.chain_spec),
-                Arc::new(parent_block),
-                r.args.evm_config.clone(),
-                r.args.payload_extradata.clone(),
-            )
-            .map_err(|e| e.to_string())
-            .map_err(EthApiError::InvalidParams)?;
+            let mut builder =
+                RedstonePayloadBuilder::<OptimismPayloadBuilderAttributes, B, V>::init(
+                    builder_attributes,
+                    r.blockchain().clone(),
+                    Arc::clone(&r.args.chain_spec),
+                    Arc::new(parent_block),
+                    r.args.evm_config.clone(),
+                    r.args.payload_extradata.clone(),
+                )
+                .map_err(|e| e.to_string())
+                .map_err(EthApiError::InvalidParams)?;
 
             for tx in txs {
                 builder
