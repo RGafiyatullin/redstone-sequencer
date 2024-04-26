@@ -20,7 +20,7 @@ use tracing::{debug, info};
 
 use crate::{api::EngineApiV3Server, components::engine::RedstoneBuiltPayload};
 
-use super::{preview::RedstonePayloadBuilder, Blockchain, Engine};
+use super::{payload_builder::RedstonePayloadBuilder, Blockchain, Engine};
 
 type PayloadAttrs = OptimismPayloadAttributes;
 

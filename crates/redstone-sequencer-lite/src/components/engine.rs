@@ -17,12 +17,12 @@ use tokio::sync::RwLock;
 mod built_payload;
 mod impl_engine_api;
 mod impl_eth_api;
-mod preview;
+mod payload_builder;
 mod tx_pool;
 
 pub use built_payload::RedstoneBuiltPayload;
 
-use self::preview::RedstonePayloadBuilder;
+use self::payload_builder::RedstonePayloadBuilder;
 
 #[derive(Debug)]
 pub struct Args<B, V> {
