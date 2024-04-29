@@ -44,7 +44,7 @@ where
     async fn new_payload(
         &self,
         payload: ExecutionPayloadV3,
-        versioned_hashes: Vec<B256>,
+        _versioned_hashes: Vec<B256>,
         parent_beacon_block_root: B256,
     ) -> RpcResult<PayloadStatus> {
         let block = reth_rpc_types_compat::engine::try_into_sealed_block(

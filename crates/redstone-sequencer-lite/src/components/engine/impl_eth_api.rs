@@ -129,18 +129,18 @@ where
 
     async fn estimate_gas(
         &self,
-        request: TransactionRequest,
-        block_number: Option<BlockId>,
-        state_override: Option<StateOverride>,
+        _request: TransactionRequest,
+        _block_number: Option<BlockId>,
+        _state_override: Option<StateOverride>,
     ) -> RpcResult<U256> {
         Ok(Default::default())
     }
 
     async fn fee_history(
         &self,
-        block_count: U64HexOrNumber,
-        newest_block: BlockNumberOrTag,
-        reward_percentiles: Option<Vec<f64>>,
+        _block_count: U64HexOrNumber,
+        _newest_block: BlockNumberOrTag,
+        _reward_percentiles: Option<Vec<f64>>,
     ) -> RpcResult<FeeHistory> {
         Ok(Default::default())
     }
@@ -166,7 +166,7 @@ where
         } = &mut *w;
 
         nonces
-            .ensure_for_address(from_address, |address| {
+            .ensure_for_address(from_address, |_address| {
                 let state = args.blockchain.latest()?;
                 let nonce = state.account_nonce(from_address)?;
                 Ok(nonce.unwrap_or_default())
@@ -213,7 +213,7 @@ where
     async fn transaction_count(
         &self,
         address: Address,
-        block_number: Option<BlockId>,
+        _block_number: Option<BlockId>,
     ) -> RpcResult<U256> {
         let r = self.0.read().await;
         let nonce = if let Some(nonce) = r.nonces.get(&address) {
