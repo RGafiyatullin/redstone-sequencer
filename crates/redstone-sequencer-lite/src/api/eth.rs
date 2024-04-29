@@ -10,6 +10,9 @@ use reth_rpc_types::{
 
 #[rpc(server, namespace = "eth")]
 pub trait EthApi {
+    #[method(name = "blockNumber")]
+    async fn block_number(&self) -> RpcResult<U256>;
+
     #[method(name = "getBalance")]
     async fn balance(&self, address: Address, block_number: Option<BlockId>) -> RpcResult<U256>;
 

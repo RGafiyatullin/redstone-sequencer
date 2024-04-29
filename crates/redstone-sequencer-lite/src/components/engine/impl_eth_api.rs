@@ -43,6 +43,19 @@ where
     B: Blockchain,
     V: ConfigureEvm + ConfigureEvmEnv,
 {
+    async fn block_number(&self) -> RpcResult<U256> {
+        let block_number = self
+            .0
+            .read()
+            .await
+            .blockchain()
+            .block_number_for_id(BlockId::latest())
+            .map_err(Into::into)
+            .map_err(EthApiError::Internal)?;
+
+        Ok(block_number.map(U256::from).unwrap_or(U256::ZERO))
+    }
+
     async fn balance(&self, address: Address, block_number: Option<BlockId>) -> RpcResult<U256> {
         let r = self.0.read().await;
         let state = if let Some(block_id) = block_number {
@@ -334,30 +347,6 @@ where
                 blob_gas_used: blob_gas_used.map(u128::from),
             };
             let mut res_receipt = alloy_rpc_types::WithOtherFields::new(res_receipt);
-
-            // {
-            //     let mut op_fields = OptimismTransactionReceiptFields::default();
-
-            //     if transaction.is_deposit() {
-            //         op_fields.deposit_nonce = receipt.deposit_nonce.map(reth_primitives::U64::from);
-            //         op_fields.deposit_receipt_version = receipt
-            //             .deposit_receipt_version
-            //             .map(reth_primitives::U64::from);
-            //     } else if let Some(l1_block_info) = optimism_tx_meta.l1_block_info {
-            //         op_fields.l1_fee = optimism_tx_meta.l1_fee;
-            //         op_fields.l1_gas_used = optimism_tx_meta.l1_data_gas.map(|dg| {
-            //             dg + l1_block_info
-            //                 .l1_fee_overhead
-            //                 .unwrap_or_default()
-            //                 .saturating_to::<u128>()
-            //         });
-            //         op_fields.l1_fee_scalar =
-            //             Some(f64::from(l1_block_info.l1_base_fee_scalar) / 1_000_000.0);
-            //         op_fields.l1_gas_price = Some(l1_block_info.l1_base_fee.saturating_to());
-            //     }
-
-            //     res_receipt.other = op_fields.into();
-            // }
 
             match transaction.transaction.kind() {
                 TransactionKind::Create => {
